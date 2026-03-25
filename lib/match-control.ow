@@ -1,0 +1,79 @@
+// ============================================================
+// MATCH CONTROL — rules for controlling match flow
+// ============================================================
+
+// Skips the hero-select phase by burning down the timer.
+rule("Skip Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(1);
+	}
+}
+
+// Immediately starts the match (use in custom lobbies / practice maps).
+rule("Quick Start Match")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+// Pauses the clock and disables built-in game-mode completion so the
+// match runs forever. Flip the score and music lines as needed.
+// Enable this rule to activate.
+disabled rule("Unlimited Match — Pause Time & Disable Completion")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Pause Match Time;
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Scoring;
+		disabled Disable Built-In Game Mode Music;
+		Set Match Time(260);
+	}
+}
+
+// Awards +1 score per kill when Unlimited Match is active.
+// Enable this rule to activate.
+disabled rule("Unlimited Match — Score On Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}

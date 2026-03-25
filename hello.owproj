@@ -1,0 +1,14 @@
+{
+  "out": "hello.ow",
+  "variables": {
+    "global": {
+      "0": "messageCount"
+    }
+  },
+  "rules": [
+    "lib/match-control.ow",
+    "lib/ui.ow",
+    "lib/scoring.ow",
+    "lib/movement.ow"
+  ]
+}

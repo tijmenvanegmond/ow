@@ -1,0 +1,72 @@
+// ============================================================
+// EFFECTS — visual/audio feedback helpers
+// ============================================================
+
+// Plays a screen-wide explosion and shows a floating "BONK" label
+// for 0.333 s every time a player takes damage.
+rule("Effect — BONK On Damage")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.016, Ignore Condition);
+		Play Effect(All Players(All Teams), Good Explosion, Color(White), Event Player, 1);
+		Create In-World Text(All Players(All Teams), Custom String("BONK"), Event Player, 10,
+			Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
+		Wait(0.333, Ignore Condition);
+		Destroy In-World Text(Last Text ID);
+	}
+}
+
+// Plays a "good pickup" ring on all players at the event player's
+// position when they join the match.
+rule("Effect — Good Pickup On Join")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Good Pickup Effect, Color(Green), Event Player, 1);
+	}
+}
+
+// Plays a blue ring explosion at the player when they use Jump Boost.
+// Pair with the Jump Boost rule in movement.ow.
+rule("Effect — Ring On Jump Boost")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Jump)) == True;
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Play Effect(Event Player, Ring Explosion, Color(Blue), Event Player, 0.500);
+		Wait(0.500, Ignore Condition);
+	}
+}

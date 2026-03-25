@@ -1,0 +1,48 @@
+// ============================================================
+// RESPAWN — death and respawn helpers
+// ============================================================
+
+// Respawns the player 1 second after they die.
+// Adjust the Wait time for a longer death timer.
+rule("Quick Respawn — 1 Second")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dead(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(1, Ignore Condition);
+		Respawn(Event Player);
+	}
+}
+
+// Gives the player infinite healing so they can't die from damage.
+// Useful for practice/training modes.
+rule("Immortal — Infinite Heal Over Time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Heal Over Time(Event Player, Event Player, 9999, 999);
+	}
+}

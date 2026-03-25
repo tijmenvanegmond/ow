@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node assemble.js rein-and-weave.owproj)"
+    ]
+  }
+}

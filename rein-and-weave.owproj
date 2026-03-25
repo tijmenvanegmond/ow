@@ -1,0 +1,16 @@
+{
+  "out": "rein-and-weave.ow",
+  "variables": {
+    "global": {
+      "0": "botsSpawnedT1",
+      "1": "botsSpawnedT2",
+      "2": "botIdx",
+      "3": "chargeTarget",
+      "4": "cmdTarget"
+    }
+  },
+  "rules": [
+    "lib/match-control.ow",
+    "rules/rein-and-weave-rules.ow"
+  ]
+}

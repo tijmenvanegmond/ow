@@ -1,0 +1,41 @@
+// ============================================================
+// SCORING — kill tracking and score display
+// ============================================================
+
+variables
+{
+	global:
+		0: messageCount
+}
+
+// Increments a global counter every time a player joins the match.
+rule("Score — Increment Counter On Join")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Global Variable(messageCount, Add, 1);
+	}
+}
+
+// Awards +1 player score per kill. Works alongside Unlimited Match.
+rule("Score — +1 Per Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}
