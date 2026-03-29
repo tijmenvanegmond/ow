@@ -2,11 +2,8 @@
   "out": "rein-and-weave.ow",
   "variables": {
     "global": {
-      "0": "botsSpawnedT1",
-      "1": "botsSpawnedT2",
-      "2": "botIdx",
-      "3": "chargeTarget",
-      "4": "cmdTarget"
+      "0": "soloSpawnedT1",
+      "1": "soloSpawnedT2"
     }
   },
   "rules": [
