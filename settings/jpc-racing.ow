@@ -21,98 +21,99 @@ settings
 	{
 		disabled Assault
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Bounty Hunter
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Capture the Flag
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Clash 6v6
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Clash
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 			Capture Speed Modifier: 45%
 		}
 
 		disabled Control
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Control 6v6
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Deathmatch
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Elimination
 		{
-			Allow Hero Switching: Disabled
+			//No worky
+			//Allow Hero Switching: Off
 		}
 
 		disabled Escort 6v6
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Escort
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Flashpoint
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Flashpoint 6v6
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Hybrid
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Hybrid 6v6
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Practice Range
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Push 6v6
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Push
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		Skirmish
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 			Limit Valid Control Points: First
 
 			disabled maps
@@ -143,21 +144,21 @@ settings
 
 		disabled Stadium Practice Range
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		disabled Team Deathmatch
 		{
-			Allow Hero Switching: Disabled
+			Allow Hero Switching: Off
 		}
 
 		General
 		{
 			Hero Limit: Off
-			Kill Cam: Disabled
-			Kill Feed: Disabled
+			Kill Cam: Off
+			Kill Feed: Off
 			Respawn Time Scalar: 0%
-			Spawn Health Packs: Disabled
+			Spawn Health Packs: Enabled
 		}
 	}
 
@@ -169,9 +170,9 @@ settings
 			{
 				Frenetic Flight Maximum Time: 200%
 				Frenetic Flight Recharge Rate: 300%
-				Frenetic Flight Unlimited Fuel: Enabled
+				Frenetic Flight Unlimited Fuel: On
 				Purr Cooldown Time: 17%
-				Spawn With Ultimate Ready: Enabled
+				Spawn With Ultimate Ready: On
 				Ultimate Generation - Combat Catnapper: 0%
 				Ultimate Generation - Passive Catnapper: 0%
 				Ultimate Generation Catnapper: 10%
