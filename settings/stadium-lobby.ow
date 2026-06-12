@@ -2,11 +2,13 @@ settings
 {
 	lobby
 	{
+		Match Voice Chat: Enabled
 		Return To Lobby: Never
 	}
 
 	modes
 	{
+		Practice Range
 		Clash Stadium
 		Control Stadium
 		Payload Race Stadium

@@ -1,14 +1,38 @@
-// ============================================================
-// WORKSHOP PROBE — minimal, unmistakable proof that Workshop
-// rules are executing in the current lobby. Purely additive:
-// changes nothing about gameplay.
-// ============================================================
+// Assembled from: rules/workshop-probe.ow
+// DO NOT EDIT — edit the source files and re-run assemble.js
+
+
+settings
+{
+	lobby
+	{
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Practice Range
+		Clash Stadium
+		Control Stadium
+		Payload Race Stadium
+		Push Stadium
+	}
+}
 
 variables
 {
 	global:
 		60: ProbeHeartbeat
 }
+
+// ── rules/workshop-probe.ow ─────────────────────────────────────
+// ============================================================
+// WORKSHOP PROBE — minimal, unmistakable proof that Workshop
+// rules are executing in the current lobby. Purely additive:
+// changes nothing about gameplay.
+// ============================================================
+
+
 
 rule("[Probe] HUD heartbeat")
 {

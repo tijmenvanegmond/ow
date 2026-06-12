@@ -30,6 +30,10 @@ A `.owproj` manifest is JSON: `out` (output file), optional `settings` (lobby se
 - `*.ow` (root) — assembled outputs, ready to paste
 - `.github/copilot-instructions.md` — detailed Workshop script reference (rule anatomy, events, physics patterns); read it before substantial script work
 
+## Stadium mode: closed to Workshop (verified 2026-06-12)
+
+Tested with `stadium-probe.owproj`: Workshop rules import into a lobby with Stadium modes (`Clash/Control/Payload Race/Push Stadium`), appear in the editor, and even fire during the match-start transition — but **Stadium match initialization tears down the Workshop runtime**: nothing executes in the match, no pre-planted artifacts (HUD text, effects, objective description) survive into it, and the script is wiped from the lobby afterwards. The settings text format is also lossy for Stadium both ways: the importer rejects per-mode blocks (`Competitive Rules`, `Limit Roles`) that the exporter writes (bare mode names import fine), and Stadium-only UI options (e.g. hero draft on/off) are not exported at all. Conclusion: "extending Stadium" is only possible by recreating Stadium-like systems in Workshop on non-Stadium modes (see `stadium-extended` — Workshop sandbox on the Stadium Practice Range map with a cash/upgrade shop). Don't retry running Workshop inside real Stadium.
+
 ## Round-tripping with the game
 
 - Outputs that include a settings block must be imported from the **custom game lobby settings screen** (its paste/import action applies settings + rules together). The Workshop editor's paste only replaces rules.
