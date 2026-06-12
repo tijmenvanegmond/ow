@@ -30,7 +30,7 @@ settings
 	{
 		General
 		{
-			Passive Health Regeneration: Disabled
+			Passive Health Regeneration: Off
 			Ultimate Generation - Passive: 0%
 		}
 	}
