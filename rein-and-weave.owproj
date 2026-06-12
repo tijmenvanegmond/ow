@@ -1,5 +1,5 @@
 {
-  "out": "rein-and-weave.ow",
+  "out": "build/rein-and-weave.ow",
   "settings": "settings/rein-and-weave.ow",
   "variables": {
     "global": {

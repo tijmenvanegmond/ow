@@ -1,5 +1,5 @@
 {
-  "out": "stadium-extended.ow",
+  "out": "build/stadium-extended.ow",
   "settings": "settings/stadium-practice-range.ow",
   "rules": [
     "imports/7X3PY-stadium-sandbox.ow",

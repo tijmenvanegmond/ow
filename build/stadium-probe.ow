@@ -6,6 +6,7 @@ settings
 {
 	lobby
 	{
+		Match Voice Chat: Enabled
 		Return To Lobby: Never
 	}
 

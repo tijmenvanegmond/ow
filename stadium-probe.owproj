@@ -1,5 +1,5 @@
 {
-  "out": "stadium-probe.ow",
+  "out": "build/stadium-probe.ow",
   "settings": "settings/stadium-lobby.ow",
   "rules": [
     "rules/workshop-probe.ow"

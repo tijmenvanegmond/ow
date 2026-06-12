@@ -149,8 +149,11 @@ rule("Unlimited Match — Score On Kill")
 
 // ── SETUP ────────────────────────────────────────────────────
 
-// Force all human players onto LifeWeaver.
-rule("Setup — Lock Humans To LifeWeaver")
+// Humans choose Reinhardt or LifeWeaver freely. One Ana per team unlocks
+// once the team already fields a LifeWeaver and a Reinhardt — counted
+// excluding yourself, so the team's only LW can't defect to Ana. Bots count
+// toward the Reinhardt requirement.
+rule("Setup — Human Hero Choice (Rein/LW, +1 Ana when fulfilled)")
 {
 	event
 	{
@@ -162,12 +165,19 @@ rule("Setup — Lock Humans To LifeWeaver")
 	conditions
 	{
 		Is Dummy Bot(Event Player) == False;
-		Hero Of(Event Player) != Hero(Lifeweaver);
 	}
 
 	actions
 	{
-		Start Forcing Player To Be Hero(Event Player, Hero(Lifeweaver));
+		While(True);
+			Set Player Allowed Heroes(Event Player,
+				Count Of(Players On Hero(Hero(Lifeweaver), Team Of(Event Player))) - (Hero Of(Event Player) == Hero(Lifeweaver)) >= 1
+				&& Count Of(Players On Hero(Hero(Reinhardt), Team Of(Event Player))) - (Hero Of(Event Player) == Hero(Reinhardt)) >= 1
+				&& Count Of(Players On Hero(Hero(Ana), Team Of(Event Player))) - (Hero Of(Event Player) == Hero(Ana)) == 0
+				? Array(Hero(Reinhardt), Hero(Lifeweaver), Hero(Ana))
+				: Array(Hero(Reinhardt), Hero(Lifeweaver)));
+			Wait(1, Ignore Condition);
+		End;
 	}
 }
 
@@ -220,7 +230,8 @@ rule("Setup — Spawn Message")
 	}
 }
 
-rule("LW — Disable Primary Fire")
+// LW must heal, not fight: block Thorn Volley (Secondary Fire).
+rule("LW — Disable Thorn Volley")
 {
 	event
 	{

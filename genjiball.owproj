@@ -1,5 +1,5 @@
 {
-  "out": "genjiball.ow",
+  "out": "build/genjiball.ow",
   "settings": "settings/genjiball.ow",
   "rules": [
     "imports/genjiball-v1.3.ow"

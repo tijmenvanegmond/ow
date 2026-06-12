@@ -1,1 +1,7 @@
+# Screenshot scratch space for in-game error messages.
 errors/
+
+# Raw lobby pulls (settings + rules copied from the game).
+# Workflow: drop here, extract settings block into settings/ and rules into
+# imports/ or rules/, then delete the pull. Never a source of truth.
+*.settings

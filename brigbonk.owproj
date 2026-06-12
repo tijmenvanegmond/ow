@@ -1,0 +1,6 @@
+{
+  "out": "build/brigbonk.ow",
+  "rules": [
+    "rules/brigbonk.ow"
+  ]
+}

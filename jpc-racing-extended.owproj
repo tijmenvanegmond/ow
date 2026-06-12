@@ -1,5 +1,5 @@
 {
-  "out": "jpc-racing-extended.ow",
+  "out": "build/jpc-racing-extended.ow",
   "settings": "settings/jpc-racing.ow",
   "rules": [
     "imports/3N0R2-jpc-racing.ow",
