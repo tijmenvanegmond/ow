@@ -300,7 +300,7 @@ rule("LW — Healing Blossom Speed Boost")
 
 // ── FIRE STRIKE BURN ─────────────────────────────────────────
 
-// When Fire Strike (Ability 1) hits, apply 3s burn: DoT + fire effect.
+// When Fire Strike (Ability 2) hits, apply 3s burn: DoT + fire effect.
 rule("Rein — Fire Strike Burns Target")
 {
 	event
@@ -313,7 +313,7 @@ rule("Rein — Fire Strike Burns Target")
 	conditions
 	{
 		Hero Of(Attacker) == Hero(Reinhardt);
-		Event Ability == Button(Ability 1);
+		Event Ability == Button(Ability 2);
 	}
 
 	actions
