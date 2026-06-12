@@ -137,6 +137,7 @@ rule("LW — Healing Blossom Speed Boost")
 	conditions
 	{
 		Hero Of(Healer) == Hero(Lifeweaver);
+		Event Player != Healer;
 	}
 
 	actions

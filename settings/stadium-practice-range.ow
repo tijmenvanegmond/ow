@@ -1,0 +1,37 @@
+settings
+{
+	main
+	{
+		Description: "Practice Range with all heroes"
+		Mode Name: "All Heroes in Stadium + Number"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		disabled Clash
+		{
+			Capture Speed Modifier: 45%
+		}
+
+		Stadium Practice Range
+
+		General
+		{
+			Respawn Time Scalar: 1%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Passive Health Regeneration: Disabled
+			Ultimate Generation - Passive: 0%
+		}
+	}
+}

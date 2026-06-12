@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node assemble.js rein-and-weave.owproj)"
+      "Bash(node assemble.js rein-and-weave.owproj)",
+      "WebSearch",
+      "WebFetch(domain:workshop.codes)",
+      "Bash(node assemble.js stadium-extended.owproj)"
     ]
   }
 }

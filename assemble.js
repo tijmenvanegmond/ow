@@ -6,6 +6,7 @@
 // The manifest is a JSON file with this shape:
 // {
 //   "out": "my-mode.ow",
+//   "settings": "settings/my-lobby.ow",        (optional, prepended verbatim)
 //   "variables": {
 //     "global": { "0": "someVar", "1": "otherVar" },
 //     "player": { "0": "playerVar" }
@@ -97,9 +98,20 @@ function buildVarsBlock(vars) {
 // ── write output ─────────────────────────────────────────────────────────────
 const sources  = manifest.rules.join(", ");
 const header   = `// Assembled from: ${sources}\n// DO NOT EDIT — edit the source files and re-run assemble.js\n`;
+
+let settingsBlock = "";
+if (manifest.settings) {
+  const settingsPath = path.resolve(base, manifest.settings);
+  if (fs.existsSync(settingsPath)) {
+    settingsBlock = fs.readFileSync(settingsPath, "utf8").trim();
+  } else {
+    console.warn(`  [warn] settings file not found, skipping: ${manifest.settings}`);
+  }
+}
+
 const varBlock = buildVarsBlock(vars);
 const body     = ruleSections.join("\n\n");
-const output   = [header, varBlock, body].join("\n\n");
+const output   = [header, settingsBlock, varBlock, body].filter(Boolean).join("\n\n");
 
 const outPath  = path.resolve(base, manifest.out);
 fs.writeFileSync(outPath, output, "utf8");

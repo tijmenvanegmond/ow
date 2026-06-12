@@ -1,0 +1,1773 @@
+settings
+{
+	main
+	{
+		Description: "Jetpack Cat has the zoomies\r\n3N0R2 - Made by Jeshaal#1649\r\nJetpack Cat Racing Discord: dsc.gg/jetpack\r\n\r\nFor unlimited fuel: Go to lobby > Settings > Heroes > Jetpack Cat > Frenetic Flight Unlimited Fuel > Enable"
+		Mode Name: "Jetpack Cat Racing"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Max Spectators: 12
+		Max Team 1 Players: 0
+		Max Team 2 Players: 12
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Bounty Hunter
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Capture the Flag
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Clash 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Clash
+		{
+			Allow Hero Switching: Disabled
+			Capture Speed Modifier: 45%
+		}
+
+		disabled Control
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Control 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Deathmatch
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Elimination
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Escort 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Escort
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Flashpoint
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Flashpoint 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Hybrid
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Hybrid 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Practice Range
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Push 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Push
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		Skirmish
+		{
+			Allow Hero Switching: Disabled
+			Limit Valid Control Points: First
+
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Esperança
+				Hanamura Winter
+				Hanaoka
+				Hollywood Halloween
+				Junkertown
+				King's Row Winter
+				Lijiang Tower Lunar New Year
+				New Junk City
+				Oasis
+				Samoa
+				Shambali Monastery
+				Suravasa
+				Throne of Anubis
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		disabled Stadium Practice Range
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Team Deathmatch
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		General
+		{
+			Hero Limit: Off
+			Kill Cam: Disabled
+			Kill Feed: Disabled
+			Respawn Time Scalar: 0%
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Jetpack Cat
+			{
+				Frenetic Flight Maximum Time: 200%
+				Frenetic Flight Recharge Rate: 300%
+				Frenetic Flight Unlimited Fuel: Enabled
+				Purr Cooldown Time: 17%
+				Spawn With Ultimate Ready: Enabled
+				Ultimate Generation - Combat Catnapper: 0%
+				Ultimate Generation - Passive Catnapper: 0%
+				Ultimate Generation Catnapper: 10%
+			}
+
+			enabled heroes
+			{
+				Jetpack Cat
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: Starting
+		1: Racetrack_Game
+		2: Lobby_High
+		3: Lobby_Best
+		4: Teleport_Spots1
+		5: Teleport_Spots2
+		26: Setting_Time
+		27: Setting_RestartDelay
+		28: Setting_CameraDelay
+		29: Setting_SpectateDelay
+		30: Setting_RaceSpeedBoost
+		31: Setting_ExpandTimerDelay
+		32: Setting_RacetrackCreator
+		33: RacetrackCreator_Effects
+		34: RacetrackCreator_Icons
+		35: Setting_InfiniteTime
+
+	player:
+		0: Racetrack
+		1: Timer
+		2: High_Score
+		3: Racing
+		4: Advanced_Info
+		5: Laps_Complete
+		6: Current_Speed
+}
+
+subroutines
+{
+	0: Reset
+}
+
+disabled rule("Setup --------------------------------------------------------------------------------------------------------------------------")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Workshop Settings")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Setting_RacetrackCreator = Workshop Setting Toggle(Custom String("Dev Stuff"), Custom String("Racetrack Creator"), False,
+			0);
+		Global.Setting_RaceSpeedBoost = Workshop Setting Integer(Custom String("Settings"), Custom String("Added Speed Boost During Race"),
+			23, 0, 40, 0);
+		Global.Setting_InfiniteTime = Workshop Setting Toggle(Custom String("Settings"), Custom String(
+			"Infinite Time (Overrides Match Time)"), False, 1);
+		Global.Setting_Time = Workshop Setting Integer(Custom String("Settings"), Custom String("Match Time (Minutes)"), 15, 1, 60, 2);
+		Global.Setting_RestartDelay = Workshop Setting Toggle(Custom String("Settings"), Custom String("Restart Delay"), True, 3);
+		Global.Setting_CameraDelay = Workshop Setting Toggle(Custom String("Settings"), Custom String("Camera Change Delay"), True, 4);
+		Global.Setting_SpectateDelay = Workshop Setting Toggle(Custom String("Settings"), Custom String("Spectate Delay"), True, 5);
+		Global.Setting_ExpandTimerDelay = Workshop Setting Toggle(Custom String("Settings"), Custom String("Expand Timer Delay"), False,
+			6);
+	}
+}
+
+rule("Game Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Discord: dsc.gg/jetpack"), Left, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		Set Match Time(Global.Setting_Time * 60);
+		Set Objective Description(All Players(All Teams), Custom String("{0} {1}", Hero Icon String(Hero(Jetpack Cat)), Custom String(
+			"Jetpack Cat Racing! - Code: 3N0R2")), Visible To and String);
+		Global.Racetrack_Game = Empty Array;
+		Global.Lobby_High = Empty Array;
+		Global.Teleport_Spots1 = Empty Array;
+		Global.Teleport_Spots2 = Empty Array;
+		Skip If(Global.Setting_RacetrackCreator == True, 6);
+		Create HUD Text(All Players(All Teams), Null, Custom String(" "), Custom String(""), Left, 0, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("{0} {1} to restart",
+			Global.Setting_RestartDelay == True ? Custom String("Hold") : Custom String("Press"), Input Binding String(Button(Reload))),
+			Right, 0, Color(White), Color(White), Color(White), Visible To and String, Visible Never);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("{0} {1} to change camera",
+			Global.Setting_CameraDelay == True ? Custom String("Hold") : Custom String("Press"), Input Binding String(Button(Interact))),
+			Right, 0, Color(White), Color(White), Color(White), Visible To and String, Visible Never);
+		Create HUD Text(Filtered Array(All Players(All Teams), Position Of(Current Array Element) == Vector(200, 1000, 2600)), Null, Null,
+			Custom String("\n "), Top, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Lobby Best: {0} by {2}", Global.Lobby_Best != 0 ? First Of(Sorted Array(
+			Global.Lobby_High, Current Array Element)) : Custom String("9999"), Null,
+			Global.Lobby_Best != 0 ? Global.Lobby_Best : Custom String("N/A")), Null, Null, Top, 0, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+		disabled Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Advanced_Info == 1), Custom String(
+			"Lobby Best: {0} by {2}", Global.Lobby_Best != 0 ? Custom String("{0}.{1}", Round To Integer(First Of(Sorted Array(
+			Global.Lobby_High, Current Array Element)), Down), String Slice((First Of(Sorted Array(Global.Lobby_High,
+			Current Array Element)) - Round To Integer(First Of(Sorted Array(Global.Lobby_High, Current Array Element)), Down) + 1)
+			* 1000000, 1, 2)) : Custom String("9999.00"), Null, Global.Lobby_Best != 0 ? Global.Lobby_Best : Custom String("N/A")), Null,
+			Null, Top, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create Effect(Filtered Array(All Players(All Teams), Global.Teleport_Spots1[0] != 0), Bad Aura, Color(Blue),
+			Global.Teleport_Spots1[0], 2.500, Visible To Position Radius and Color);
+		Create Effect(Filtered Array(All Players(All Teams), Global.Teleport_Spots1[1] != 0), Bad Aura, Color(Blue),
+			Global.Teleport_Spots1[1], 2.500, Visible To Position Radius and Color);
+		Create Effect(Filtered Array(All Players(All Teams), Global.Teleport_Spots2[0] != 0), Bad Aura, Color(Blue),
+			Global.Teleport_Spots2[0], 2.500, Visible To Position Radius and Color);
+		Create Effect(Filtered Array(All Players(All Teams), Global.Teleport_Spots2[1] != 0), Bad Aura, Color(Blue),
+			Global.Teleport_Spots2[1], 2.500, Visible To Position Radius and Color);
+	}
+}
+
+rule("Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Global.Starting);
+		Event Player.Racetrack = Global.Racetrack_Game;
+		Create Effect(Filtered Array(Event Player, Event Player.Racetrack[0] != 0), Good Aura, Color(Green), Event Player.Racetrack[0],
+			2.500, Visible To Position and Radius);
+		Create Effect(Filtered Array(Event Player, Event Player.Racetrack[1] != 0), Good Aura, Color(White), Event Player.Racetrack[1],
+			2.500, Visible To Position and Radius);
+		Create HUD Text(Event Player, Custom String("Time: {0}{1}", Event Player.Timer, Event Player.Timer == 0 ? Custom String(".00")
+			: Custom String("")), Null, Null, Left, 1, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Create HUD Text(Event Player, Custom String("Best Time: {0}", First Of(Sorted Array(Event Player.High_Score,
+			Current Array Element))), Null, Null, Left, 2, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Event Player.Timer = 0;
+		Event Player.High_Score = Array(9999.001);
+		Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) == True), Custom String("Best Time: {0}",
+			First Of(Sorted Array(Event Player.High_Score, Current Array Element))), Update Every Frame(Eye Position(Event Player)
+			+ Vector(0, 0.500, 0)), 1, Clip Against Surfaces, Visible To Position and String, Color(White), Default Visibility);
+		Event Player.Racing = False;
+		Disallow Button(Event Player, Button(Ultimate));
+		Set Facing(Event Player, Direction Towards(Global.Starting, Event Player.Racetrack[0]), To World);
+		Create HUD Text(Event Player, Custom String("Progress - {0}/{1}", Count Of(Global.Racetrack_Game) - Count Of(
+			Event Player.Racetrack), Count Of(Global.Racetrack_Game)), Null, Null, Left, 2, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Null, Null, Custom String("{0} {1} to {2} spectating",
+			Global.Setting_SpectateDelay == True ? Custom String("Hold") : Custom String("Press"), Input Binding String(Button(Ultimate)),
+			Is Alive(Event Player) ? Custom String("start") : Custom String("stop")), Right, 1, Color(White), Color(White), Color(White),
+			Visible To and String, Visible Never);
+		Disallow Button(Event Player, Button(Ultimate));
+		disabled Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) == True), Custom String("Best Time: {0}",
+			First Of(Sorted Array(Event Player.High_Score, Current Array Element))), Update Every Frame(Eye Position(Event Player)
+			+ Vector(0, 0.500, 0)), 1, Clip Against Surfaces, Visible To Position and String, Color(White), Default Visibility);
+		disabled Create HUD Text(Filtered Array(Event Player, Event Player.Advanced_Info == 1), Custom String("Time: {0}.{1}{2}", Round To Integer(
+			Event Player.Advanced_Info, Down), String Slice((Event Player.Timer - Round To Integer(Event Player.Timer, Down) + 1)
+			* 1000000, 1, 6), String Slice((Event Player.Timer - Round To Integer(Event Player.Timer, Down) + 1) * 1000000, 8, 2)), Null,
+			Null, Left, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Null, Null, Custom String("{0} {1} to {2} HUD", Global.Setting_RestartDelay == True ? Custom String(
+			"Press") : Custom String("Press"), Input Binding String(Button(Melee)), Event Player.Advanced_Info == 0 ? Custom String(
+			"expand") : Custom String("contract")), Right, 1, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		disabled Create Icon(Filtered Array(Event Player, Event Player.Racetrack != Empty Array), Event Player.Racetrack[0], Ring Thick,
+			Visible To and Position, Color(Green), True);
+		Create HUD Text(Filtered Array(Event Player, Event Player.Advanced_Info == True), Custom String("Speed: {0} MPS", Speed Of(
+			Event Player)), Null, Null, Left, 10, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(Event Player, Event Player.Advanced_Info == True), Custom String("Laps Completed: {0}",
+			Event Player.Laps_Complete), Null, Null, Left, 11, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		disabled Create HUD Text(Event Player, Custom String("Time: {0}", Event Player.Timer), Null, Null, Left, 1, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		disabled Create HUD Text(Event Player, Custom String("Time: {0}.{1}", Round To Integer(Event Player.Timer, Down), String Slice(
+			Custom String("{0}", Event Player.Timer), 2 + (String Length(Custom String("{0}", Round To Integer(Event Player.Timer, Down)))
+			- 1), 2)), Null, Null, Left, 1, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create In-World Text(Filtered Array(Event Player, Event Player.Racetrack[0] != 0), Custom String("o"), Event Player.Racetrack[0],
+			2.500, Do Not Clip, Visible To Position and String, Color(Green), Default Visibility);
+		Create In-World Text(Filtered Array(Event Player, Event Player.Racetrack[1] != 0), Custom String("o"), Event Player.Racetrack[1],
+			1.500, Do Not Clip, Visible To Position and String, Color(White), Default Visibility);
+	}
+}
+
+rule("Infinite Time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Setting_InfiniteTime == True;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		disabled Pause Match Time;
+		Set Match Time(1 / 60);
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+disabled rule("Race ---------------------------------------------------------------------------------------------------------------------------")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Reload)) == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Skip If(Global.Setting_RestartDelay == False || Event Player.Racing == False, 1);
+		Wait(0.500, Abort When False);
+		Call Subroutine(Reset);
+		Skip If(Is Alive(Event Player) == True, 1);
+		Resurrect(Event Player);
+	}
+}
+
+rule("Reset Subroutine")
+{
+	event
+	{
+		Subroutine;
+		Reset;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Velocity Of(Event Player) * -1, 0.001, To World, Cancel Contrary Motion);
+		Teleport(Event Player, Global.Starting);
+		Event Player.Racetrack = Global.Racetrack_Game;
+		Event Player.Timer = 0;
+		Stop Chasing Player Variable(Event Player, Timer);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Move Speed(Event Player, 100);
+		Event Player.Racing = False;
+		Set Facing(Event Player, Direction Towards(Global.Starting, Event Player.Racetrack[0]), To World);
+	}
+}
+
+rule("Score")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player.Racetrack[0], Eye Position(Event Player)) <= 3.200;
+		Is Alive(Event Player) == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Racetrack, Remove From Array By Index, 0);
+		Chase Player Variable At Rate(Event Player, Timer, 100000000, 1, Destination and Rate);
+		Event Player.Racing = True;
+		Set Ability 1 Enabled(Event Player, False);
+		Set Move Speed(Event Player, 100 + Global.Setting_RaceSpeedBoost);
+		Skip If(Is Using Ability 1(Event Player) == False, 1);
+		Cancel Primary Action(Event Player);
+		Play Effect(Event Player, Buff Explosion Sound, Color(White), Eye Position(Event Player), 100);
+	}
+}
+
+rule("Finish")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Racetrack == Array();
+		disabled Event Player.Timer != 0;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Event Player.Racing = False;
+		Set Ability Cooldown(Event Player, Button(Ability 1), 2);
+		Stop Chasing Player Variable(Event Player, Timer);
+		Big Message(Event Player, Custom String("Time: {0} {1}", Event Player.Timer, First Of(Sorted Array(Event Player.High_Score,
+			Current Array Element)) == Event Player.Timer ? Custom String("(New Personal Best!)") : Custom String("")));
+		Modify Player Variable(Event Player, High_Score, Append To Array, Event Player.Timer);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Move Speed(Event Player, 100);
+		Skip If(Event Player.Timer == 0, 7);
+		Event Player.Laps_Complete += 1;
+		Modify Global Variable(Lobby_High, Append To Array, Event Player.Timer);
+		Global.Lobby_Best = First Of(Sorted Array(Global.Lobby_High, Current Array Element)) == First Of(Sorted Array(
+			Event Player.High_Score, Current Array Element)) ? Custom String("{0}", Event Player) : Global.Lobby_Best;
+		Skip If(Event Player.Timer != First Of(Sorted Array(Global.Lobby_High, Current Array Element)), 3);
+		Small Message(Event Player, Custom String("Lobby Best Beaten!"));
+		Big Message(All Players(All Teams), Custom String("New Lobby Best - {0} by {1}", Event Player.Timer, Event Player));
+		Play Effect(Event Player, Ring Explosion Sound, Color(White), Eye Position(Event Player), 100);
+	}
+}
+
+rule("Use Portal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(First Of(Sorted Array(Global.Teleport_Spots1, Distance Between(Current Array Element, Eye Position(
+			Event Player)))), Eye Position(Event Player)) <= 3.200;
+		Global.Teleport_Spots1 != 0;
+		Global.Teleport_Spots2 != 0;
+	}
+
+	actions
+	{
+		Event Player.Current_Speed = Speed Of(Event Player);
+		Teleport(Event Player, Global.Teleport_Spots2[Index Of Array Value(Global.Teleport_Spots1, First Of(Sorted Array(
+			Global.Teleport_Spots1, Distance Between(Current Array Element, Eye Position(Event Player)))))]);
+		Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Event Player.Racetrack[0]), To World);
+		Apply Impulse(Event Player, Velocity Of(Event Player) * -1, 0.001, To World, Cancel Contrary Motion);
+		Wait(0.016, Ignore Condition);
+		Apply Impulse(Event Player, Direction Towards(First Of(Sorted Array(Global.Teleport_Spots2, Distance Between(Current Array Element,
+			Event Player))), Event Player.Racetrack[0]), Event Player.Current_Speed, To World, Cancel Contrary Motion);
+		Play Effect(Event Player, Buff Impact Sound, Color(White), Eye Position(Event Player), 100);
+	}
+}
+
+rule("Ability 1 Message")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 1)) == True;
+		Event Player.Racing == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Wait(0.032, Abort When False);
+		Small Message(Event Player, Custom String("{0} Ability 1 is unavailable during races", Ability Icon String(Hero(Jetpack Cat),
+			Button(Ability 1))));
+	}
+}
+
+rule("Movement Collision")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Racing == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Disable Movement Collision With Players(Event Player);
+		Disallow Button(Event Player, Button(Interact));
+		Wait Until(Event Player.Racing == False, 99999);
+		Enable Movement Collision With Players(Event Player);
+		Allow Button(Event Player, Button(Interact));
+	}
+}
+
+disabled rule("Commands -----------------------------------------------------------------------------------------------------------------------")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Change Camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Skip If(Global.Setting_CameraDelay == False, 1);
+		Wait(0.100 - 0.016, Abort When False);
+		Event Player.Z = Event Player.Z == 2 ? 0 : Event Player.Z + 1;
+		Wait(0.016, Ignore Condition);
+		If(Event Player.Z != 0);
+			If(Event Player.Z == 1);
+				Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+					+ World Vector Of(Vector(-0.500, 0, 0), Event Player, Rotation) + Facing Direction Of(Event Player) * -4.300, Null,
+					Event Player, False) + Direction Towards(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+					+ Facing Direction Of(Event Player) * -4.300 + World Vector Of(Vector(-0.500, 0, 0), Event Player, Rotation), Null,
+					Event Player, False), Eye Position(Event Player) + World Vector Of(Vector(-0.500, 0, 0), Event Player, Rotation)) * 0.300),
+					Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 1000 + World Vector Of(Vector(-0.500, 0,
+					0), Event Player, Rotation)), 10000);
+			Else If(Event Player.Z == 2);
+				Start Camera(Event Player, Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+					+ World Vector Of(Vector(0.500, 0, 0), Event Player, Rotation) + Facing Direction Of(Event Player) * -4.300, Null,
+					Event Player, False) + Direction Towards(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+					+ Facing Direction Of(Event Player) * -4.300 + World Vector Of(Vector(0.500, 0, 0), Event Player, Rotation), Null,
+					Event Player, False), Eye Position(Event Player) + World Vector Of(Vector(0.500, 0, 0), Event Player, Rotation)) * 0.300),
+					Update Every Frame(Eye Position(Event Player) + Facing Direction Of(Event Player) * 1000 + World Vector Of(Vector(0.500, 0, 0),
+					Event Player, Rotation)), 10000);
+			End;
+		Else;
+			Stop Camera(Event Player);
+		End;
+	}
+}
+
+rule("Spectate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Skip If(Global.Setting_SpectateDelay == False, 1);
+		Wait(0.500 - 0.016, Abort When False);
+		If(Is Alive(Event Player) == True);
+			Set Respawn Max Time(Event Player, 9999);
+			Wait(0.016, Ignore Condition);
+			Stop Chasing Player Variable(Event Player, Timer);
+			Event Player.Timer = 0;
+			Kill(Event Player, Null);
+		Else;
+			Set Respawn Max Time(Event Player, 0.500);
+			Wait(0.016, Ignore Condition);
+			Resurrect(Event Player);
+			Call Subroutine(Reset);
+		End;
+	}
+}
+
+rule("Expand HUD")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Melee)) == True;
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Skip If(Global.Setting_ExpandTimerDelay == False, 1);
+		Wait(0.250, Abort When False);
+		Event Player.Advanced_Info = Event Player.Advanced_Info == 0 ? 1 : 0;
+	}
+}
+
+disabled rule("Maps ---------------------------------------------------------------------------------------------------------------------------")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("New Queen Street")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(New Queen Street);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(87.110, 19.192, -14.101);
+		Global.Racetrack_Game = Array(Vector(71.630, 16.229, -15.044), Vector(52.532, 14.669, -9.043), Vector(39.694, 11.983, -6.218),
+			Vector(25.603, 7.790, -4.040), Vector(16.232, 6.913, -5.357), Vector(4.897, 8.402, -8.903), Vector(-3.127, 8.230, -11.049),
+			Vector(-7.471, 8.977, -18.736), Vector(-15.950, 10.329, -33.345), Vector(-26.643, 10.364, -42.376), Vector(-37.294, 10.569,
+			-46.447), Vector(-49.380, 10.496, -46.313), Vector(-58.848, 10.803, -40.199), Vector(-64.694, 13.757, -24.272), Vector(-59.853,
+			14.029, -10.786), Vector(-51.545, 14.039, -5.896), Vector(-34.970, 16.469, -2.386), Vector(-29.479, 17.805, 5.124), Vector(
+			-26.010, 17.530, 20.609), Vector(-18.329, 17.488, 29.516), Vector(-11.134, 17.200, 34.557), Vector(1.484, 16.615, 37.106),
+			Vector(19.013, 16.356, 38.003), Vector(35.046, 15.829, 36.415), Vector(47.685, 15.341, 34.339), Vector(59.403, 14.688, 31.311),
+			Vector(70.974, 14.380, 17.829), Vector(77.191, 14.214, 8.580), Vector(82.809, 14.733, -2.180), Vector(80.684, 15.440,
+			-11.449));
+	}
+}
+
+rule("Aatlis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Aatlis);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(55.241, 23.771, -83.406);
+		Global.Racetrack_Game = Array(Vector(56.261, 22.083, -74.927), Vector(56.897, 18.185, -62.444), Vector(60.609, 17.116, -51.228),
+			Vector(70.118, 17.420, -40.183), Vector(77.796, 17.828, -29.290), Vector(81.521, 17.358, -18.138), Vector(83.427, 17.507,
+			-9.737), Vector(89.743, 16.165, -1.562), Vector(97.702, 13.497, 7.821), Vector(101.887, 12.277, 16.779), Vector(101.056,
+			11.252, 28.021), Vector(92.729, 10.596, 34.254), Vector(80.786, 10.195, 37.343), Vector(69.258, 12.481, 41.046), Vector(61.675,
+			15.067, 42.804), Vector(51.172, 16.939, 42.382), Vector(39.469, 16.675, 39.427), Vector(30.757, 16.210, 32.599), Vector(31.216,
+			16.054, 23.635), Vector(32.852, 16.229, 13.985), Vector(28.254, 16.457, 3.010), Vector(22.099, 16.332, 0.157), Vector(10.857,
+			17.561, -0.902), Vector(-5.799, 18.774, -6.322), Vector(-5.031, 18.777, -10.728), Vector(2.093, 17.103, -15.065), Vector(0.034,
+			16.197, -34.509), Vector(-0.320, 16.586, -49.288), Vector(7.460, 16.985, -60.139), Vector(1.898, 20.993, -75.063), Vector(
+			-4.127, 20.320, -80.309), Vector(-12.904, 20.172, -84.307), Vector(-23.902, 19.847, -88.489), Vector(-36.286, 20.535, -88.543),
+			Vector(-46.393, 19.900, -80.657), Vector(-52.955, 19.378, -70.530), Vector(-59.683, 20.202, -62.921), Vector(-69.236, 19.154,
+			-56.831), Vector(-76.352, 18.047, -50.094), Vector(-78.254, 18.290, -33.386), Vector(-71.491, 18.457, -23.840), Vector(-60.771,
+			18.951, -17.188), Vector(-54.070, 19.670, -10.127), Vector(-52.849, 16.224, -1.364), Vector(-56.449, 16.250, 10.521), Vector(
+			-67.868, 16.417, 16.178), Vector(-74.870, 16.439, 21.776), Vector(-77.589, 16.006, 38.458), Vector(-76.538, 16.089, 49.916),
+			Vector(-75.135, 15.752, 57.667), Vector(-69.298, 16.084, 63.271), Vector(-57.286, 17.422, 66.581));
+	}
+}
+
+rule("Lijiang Tower")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Lijiang Tower);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Teleport_Spots1 = Array(Vector(13.855, 2.962, -68.183), Vector(0.366, 96.260, 138.346));
+		Global.Teleport_Spots2 = Array(Vector(-64.258, 98.290, 151.597), Vector(-47.025, 270.108, 329.709));
+		Global.Starting = Vector(-63.117, 8.077, -48.665);
+		Global.Racetrack_Game = Array(Vector(-52.822, 8.637, -47.295), Vector(-40.908, 8.121, -46.168), Vector(-27.929, 8.178, -41.159),
+			Vector(-22.392, 8.255, -31.826), Vector(-9.561, 8.213, -22.437), Vector(6.076, 10.227, -23.435), Vector(19.570, 12.444,
+			-27.023), Vector(29.506, 13.584, -27.591), Vector(44.008, 14.345, -35.981), Vector(48.526, 13.883, -46.744), Vector(51.698,
+			12.893, -56.788), Vector(45.963, 12.397, -68.764), Vector(33.700, 9.354, -73.974), Vector(19.321, 4.484, -70.647), Vector(
+			-56.590, 98.077, 151.289), Vector(-38.410, 97.550, 149.910), Vector(-26.887, 99.294, 150.158), Vector(-11.865, 99.784,
+			149.847), Vector(-1.278, 100.143, 146.798), Vector(7.639, 99.925, 149.699), Vector(27.616, 98.794, 151.026), Vector(37.798,
+			97.420, 148.168), Vector(44.638, 98.035, 136.471), Vector(40.737, 98.585, 124.066), Vector(33.648, 98.185, 113.860), Vector(
+			22.453, 98.319, 104.734), Vector(10.156, 97.638, 102.489), Vector(0.071, 98.104, 108.609), Vector(0.038, 98.245, 120.488),
+			Vector(3.078, 98.052, 130.326), Vector(-39.936, 269.502, 321.980), Vector(-32.404, 269.460, 311.646), Vector(-26.548, 270.155,
+			297.582), Vector(-19.938, 272.142, 287.863), Vector(-13.360, 272.567, 279.019), Vector(-4.509, 273.030, 268.444), Vector(
+			-0.528, 273.290, 262.102), Vector(10.450, 272.998, 256.927), Vector(18.344, 273.245, 261.234), Vector(27.075, 273.133,
+			268.911), Vector(33.487, 273.054, 276.030), Vector(39.791, 272.813, 285.080), Vector(44.075, 272.470, 293.637), Vector(46.723,
+			272.019, 302.811), Vector(49.502, 273.133, 319.381), Vector(47.255, 273.401, 330.585), Vector(38.251, 273.879, 341.047),
+			Vector(26.262, 272.219, 341.074), Vector(17.218, 272.026, 333.132), Vector(12.655, 272.383, 323.633), Vector(5.506, 272.279,
+			316.514), Vector(0.481, 271.972, 309.965), Vector(0.137, 272.627, 297.304), Vector(-0.439, 275.185, 284.685));
+	}
+}
+
+rule("Nepal")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Nepal);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Teleport_Spots1 = Array(Vector(-189.784, -91.238, -1.740), Vector(-41.749, 20.405, -11.356));
+		Global.Teleport_Spots2 = Array(Vector(-41.505, 21.547, 80.410), Vector(83.412, 137.680, 75.566));
+		Global.Starting = Vector(-189.180, -100.470, 84.974);
+		Global.Racetrack_Game = Array(Vector(-197.439, -96.763, 73.262), Vector(-215.271, -93.045, 50.119), Vector(-220.354, -93.368,
+			29.174), Vector(-220.556, -92.286, 9.843), Vector(-220.535, -91.811, -5.901), Vector(-220.450, -93.984, -24.784), Vector(
+			-218.268, -93.401, -40.904), Vector(-212.235, -93.921, -50.562), Vector(-201.210, -93.905, -59.717), Vector(-184.589, -89.087,
+			-60.965), Vector(-173.265, -84.444, -55.943), Vector(-163.536, -78.997, -40.879), Vector(-157.928, -72.582, -22.268), Vector(
+			-165.414, -76.591, -9.124), Vector(-180.071, -85.216, -5.039), Vector(-37.421, 17.863, 61.584), Vector(-38.264, 15.689,
+			44.296), Vector(-45.482, 14.338, 36.674), Vector(-54.356, 14.016, 18.773), Vector(-61.783, 14.802, 8.541), Vector(-62.978,
+			19.095, -10.339), Vector(-60.936, 25.408, -32.133), Vector(-51.672, 25.920, -39.140), Vector(-38.574, 28.254, -32.515), Vector(
+			-39.832, 23.983, -17.699), Vector(83.397, 134.979, 52.657), Vector(75.207, 134.228, 24.749), Vector(67.315, 133.821, 17.608),
+			Vector(66.892, 135.092, -5.175), Vector(70.994, 134.155, -22.450), Vector(80.578, 134.389, -29.132), Vector(80.189, 134.621,
+			-41.057), Vector(69.556, 134.513, -52.187), Vector(51.697, 132.810, -43.329), Vector(47.016, 133.206, -22.295), Vector(56.031,
+			133.404, -0.275), Vector(66.405, 135.291, 2.338), Vector(80.160, 133.480, 1.841));
+	}
+}
+
+rule("Temple of Anubis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Temple of Anubis);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(6.823, 8.676, -12.257);
+		Global.Racetrack_Game = Array(Vector(2.602, 6.128, -5.831), Vector(-6.139, 5.043, 10.333), Vector(-9.997, 4.407, 18.475), Vector(
+			-21.439, 7.172, 31.078), Vector(-33.251, 12.790, 43.130), Vector(-35.129, 12.853, 49.849), Vector(-29.078, 12.130, 67.794),
+			Vector(-25.266, 11.053, 82.064), Vector(-22.906, 10.323, 94.852), Vector(-19.644, 9.355, 108.681), Vector(-8.242, 9.467,
+			112.190), Vector(4.735, 8.788, 112.854), Vector(13.575, 7.960, 109.669), Vector(17.785, 7.145, 100.187), Vector(10.880, 4.526,
+			88.684), Vector(0.111, 5.184, 86.876), Vector(-6.784, 5.896, 85.266), Vector(-9.947, 6.312, 80.534), Vector(-11.446, 11.278,
+			64.693), Vector(-12.099, 13.493, 49.663), Vector(-16.395, 12.888, 37.034), Vector(-16.872, 10.322, 29.208), Vector(-13.362,
+			4.296, 12.216), Vector(-12.253, 3.452, 2.193), Vector(-5.798, 3.084, -4.913));
+	}
+}
+
+rule("Busan")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Busan);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(114.549, 21.767, -129.096);
+		Global.Racetrack_Game = Array(Vector(106.048, 21.593, -127.302), Vector(89.818, 18.814, -122.786), Vector(78.945, 17.842,
+			-117.069), Vector(63.240, 15.175, -118.192), Vector(47.580, 12.738, -127.185), Vector(37.008, 12.037, -134.834), Vector(23.227,
+			14.659, -135.253), Vector(15.974, 15.216, -124.948), Vector(19.203, 16.017, -108.536), Vector(21.479, 19.892, -90.479), Vector(
+			25.617, 21.532, -81.693), Vector(33.535, 21.618, -78.696), Vector(47.753, 20.166, -87.394), Vector(-389.546, 14.844, 160.827),
+			Vector(-379.007, 14.623, 152.949), Vector(-363.337, 14.267, 137.601), Vector(-351.672, 13.161, 123.736), Vector(-334.768,
+			12.295, 110.709), Vector(-322.563, 12.136, 110.219), Vector(-309.434, 11.715, 118.352), Vector(-302.810, 13.427, 128.597),
+			Vector(-305.229, 13.273, 137.660), Vector(-313.379, 12.873, 142.249), Vector(156.523, 12.874, 262.211), Vector(167.226, 12.517,
+			253.463), Vector(171.240, 15.258, 245.343), Vector(174.768, 15.574, 233.811), Vector(188, 17.846, 226.520), Vector(195.023,
+			19.946, 217.127), Vector(207.163, 20.796, 210.275), Vector(223.884, 20.390, 204.553), Vector(232.376, 19.666, 208.798), Vector(
+			240.305, 18.555, 222.750), Vector(247.043, 15.348, 239.451), Vector(248.435, 12.732, 248.107), Vector(242.169, 11.710,
+			256.703), Vector(233.098, 11.692, 257.764), Vector(224.429, 11.578, 246.677));
+		Global.Teleport_Spots1 = Array(Vector(53.264, 19.209, -92.470), Vector(-319.689, 12.538, 142.640));
+		Global.Teleport_Spots2 = Array(Vector(-402.397, 15.628, 167.659), Vector(148.398, 13.250, 268.832));
+	}
+}
+
+rule("Antarctic Peninsula")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Antarctic Peninsula);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(187.324, 54.170, 167.634);
+		Global.Racetrack_Game = Array(Vector(194.778, 53.007, 163.331), Vector(208.011, 49.193, 156.192), Vector(221.052, 48.564, 158.501),
+			Vector(237.504, 48.487, 156.994), Vector(250.184, 47.624, 164.303), Vector(259.739, 46.846, 168.162), Vector(273.263, 46.402,
+			183.440), Vector(288.254, 44.944, 187.992), Vector(302.150, 42.198, 182.859), Vector(317.193, 45.300, 180.582), Vector(331.692,
+			46.164, 173.346), Vector(336.829, 46.423, 165.400), Vector(218.803, -3.243, -237.014), Vector(237.614, -5.057, -245.858),
+			Vector(257.761, -9.012, -257.482), Vector(278.380, -7.014, -258.642), Vector(296.849, -7.890, -258.591), Vector(310.347,
+			-9.186, -258.841), Vector(329.700, -6.778, -244.080), Vector(330.579, -7.008, -232.828), Vector(325.874, -7.324, -224.053),
+			Vector(307.624, -5.253, -214.001), Vector(291.683, -6.309, -205.128), Vector(283.981, -9.212, -213.760), Vector(-91.755,
+			13.717, 61.815), Vector(-107.565, 11.072, 50.180), Vector(-123.663, 10.043, 28.279), Vector(-123.743, 10.628, 3.238), Vector(
+			-115.188, 12.433, -2.898), Vector(-110.518, 13.285, -11.147), Vector(-108.663, 11.301, -22.211), Vector(-107.859, 12.114,
+			-36.898), Vector(-104.460, 12.124, -48.922), Vector(-90.790, 12.387, -59.882), Vector(-71.348, 17.112, -54.047), Vector(
+			-66.727, 12.860, -34.458), Vector(-66.025, 10.444, -18.083), Vector(-54.652, 10.703, -0.083));
+		Global.Teleport_Spots1 = Array(Vector(338.951, 46.394, 156.322), Vector(284.035, -9.945, -224.456));
+		Global.Teleport_Spots2 = Array(Vector(210.580, -1.788, -233.464), Vector(-83.307, 18.319, 73.247));
+	}
+}
+
+rule("Ilios")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Ilios);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(282.312, -20.179, -88.341);
+		Global.Racetrack_Game = Array(Vector(292.413, -20.408, -89.935), Vector(306.207, -22.436, -90.563), Vector(312.629, -22.733,
+			-86.595), Vector(316.089, -22.434, -70.917), Vector(319.905, -21.832, -55.745), Vector(325.800, -21.676, -49.439), Vector(
+			335.222, -21.227, -41.156), Vector(346.931, -19.411, -34.864), Vector(361.241, -20.347, -25.670), Vector(367.515, -21.500,
+			-12.196), Vector(360.377, -21.769, -0.788), Vector(351.922, -22.037, 6.356), Vector(-169.630, -0.094, -60.186), Vector(
+			-185.024, 1.496, -44.400), Vector(-189.590, 4.314, -34.153), Vector(-189.569, 9.340, -23.091), Vector(-190.199, 13.423,
+			-13.573), Vector(-194.543, 21.519, -3.347), Vector(-205.705, 19.368, 10.415), Vector(-216.388, 16.118, 18.453), Vector(
+			-230.560, 10.610, 28.144), Vector(-242.581, 4.473, 36.046), Vector(-253.551, 2.816, 42.478), Vector(102.777, 64.641, -152.639),
+			Vector(92.396, 64.358, -149.115), Vector(74.719, 65.513, -146.321), Vector(61.246, 65.703, -149.329), Vector(50.892, 67.200,
+			-157.974), Vector(38.811, 68.393, -169.201), Vector(32.445, 67.495, -177.583), Vector(24.412, 67.075, -179.277), Vector(13.644,
+			66.403, -177.576), Vector(7.706, 66.250, -172.077), Vector(2.372, 65.827, -164.997), Vector(-12.591, 63.483, -156.581), Vector(
+			-30.502, 63.122, -156.554), Vector(-39.914, 64.222, -153.109), Vector(-52.176, 63.534, -150.654));
+		Global.Teleport_Spots1 = Array(Vector(342.214, -21.337, 20.891), Vector(-260.868, 3.175, 46.858));
+		Global.Teleport_Spots2 = Array(Vector(-160.679, 2.213, -78.061), Vector(115.434, 68.197, -156.491));
+	}
+}
+
+rule("Havana")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Havana);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-87.745, 12.898, -45.124);
+		Global.Racetrack_Game = Array(Vector(-78.964, 9.303, -46.816), Vector(-63.814, 7.181, -50.336), Vector(-42.553, 7.878, -55.538),
+			Vector(-28.936, 8.293, -65.430), Vector(-1.454, 7.801, -70.183), Vector(3.841, 7.950, -78.318), Vector(17.290, 8.327, -77.754),
+			Vector(24.831, 8.063, -67.932), Vector(37.104, 8.157, -71.800), Vector(47.937, 8.355, -81.423), Vector(61.277, 7.800, -93.151),
+			Vector(73.700, 9.601, -92.584), Vector(91.944, 8.578, -85.874), Vector(101.997, 6.769, -74.555), Vector(105.467, 2.628,
+			-54.052), Vector(106.156, 3.344, -40.328), Vector(109.671, 6.390, -26.479), Vector(122.281, 7.540, -14.441), Vector(131.506,
+			7.589, -13.163), Vector(138.663, 7.359, -20.738), Vector(138.917, 7.718, -30.320), Vector(131.525, 11.379, -44.736), Vector(
+			121.651, 14.787, -57.314), Vector(106.036, 16.513, -66.646), Vector(96.308, 16.026, -78.478), Vector(87.780, 16.513, -84.378),
+			Vector(77.987, 15.360, -80.962), Vector(68.646, 12.596, -74.087), Vector(61.055, 13.406, -68.918), Vector(49.530, 13.290,
+			-67.495), Vector(35.823, 14.054, -61.109), Vector(18.342, 14.265, -52.009), Vector(1.689, 14.360, -56.576), Vector(-2.692,
+			14.604, -65.186), Vector(-27.312, 14.511, -66.390), Vector(-36.672, 13.327, -58.863), Vector(-49.707, 9.545, -49.553), Vector(
+			-63.196, 7.541, -50.277), Vector(-78.280, 9.682, -47.225));
+	}
+}
+
+rule("Route 66")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Route 66);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(55.477, 4.361, 58.532);
+		Global.Racetrack_Game = Array(Vector(62.667, 3.179, 49.420), Vector(68.691, 3.914, 39.271), Vector(69.014, 4.250, 27.963), Vector(
+			72.229, 6.812, 10.224), Vector(65.871, 8.054, 1.319), Vector(56.104, 9.188, -4.384), Vector(41.317, 11.538, -13.904), Vector(
+			20.910, 14.853, -21.552), Vector(5.216, 11.879, -22.828), Vector(-3.974, 9.194, -19.937), Vector(-19.622, 6.125, -27.798),
+			Vector(-30.639, 5.772, -33.421), Vector(-43.679, 5.641, -25.432), Vector(-55.169, 5.634, -17.126), Vector(-61.299, 5.811,
+			-3.684), Vector(-65.463, 8.031, 4.396), Vector(-72.512, 8.620, 9.033), Vector(-85.603, 10.368, 13.181), Vector(-99.189, 12.110,
+			7.165), Vector(-106.990, 12.702, -8.104), Vector(-102.131, 11.181, -20.399), Vector(-92.513, 10.973, -20.682), Vector(-85.428,
+			10.208, -11.618), Vector(-83.111, 9.378, -1.583), Vector(-66.854, 9.380, 12.524), Vector(-61.006, 9.176, 16.884), Vector(
+			-50.005, 9.054, 17.926), Vector(-44.025, 5.453, 7.897), Vector(-38.819, 8.648, -1.782), Vector(-32.571, 11.891, -6.491),
+			Vector(-22.286, 12.052, -12.041), Vector(-6.216, 12.660, -20.813), Vector(11.297, 13.272, -24.261), Vector(28.318, 13.079,
+			-12.679), Vector(42.367, 11.379, -2.996), Vector(52.569, 10.278, 12.652), Vector(52.021, 9.107, 20.905), Vector(43.865, 5.162,
+			30.808), Vector(36.663, 3.120, 39.223), Vector(35.757, 2.476, 55.828));
+	}
+}
+
+rule("Midtown")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Midtown);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-2.153, 7.976, 87.009);
+		Global.Racetrack_Game = Array(Vector(-7.865, 6.605, 77.215), Vector(-4.685, 6.554, 54.852), Vector(15.092, 6.410, 49.287), Vector(
+			29.127, 6.852, 47.277), Vector(42.918, 8.362, 29.374), Vector(50.757, 2.639, 9.679), Vector(50.609, 3.821, -9.572), Vector(
+			53.840, 7.003, -18.074), Vector(70.351, 9.389, -20.639), Vector(91.656, 7.877, -30.249), Vector(96.778, 7.496, -45.061),
+			Vector(110.095, 9.382, -58.099), Vector(111.748, 6.559, -78.050), Vector(120.385, 5.668, -83.199), Vector(127.911, 5.134,
+			-78.816), Vector(122.747, 5.058, -53.509), Vector(97.368, 6.405, -44.815), Vector(80.218, 7.181, -23.777), Vector(60.743,
+			16.442, -13.955), Vector(51.105, 16.836, 2.462), Vector(39.929, 11.669, 30.373), Vector(31.852, 7.753, 44.316), Vector(22.617,
+			6.947, 47.978), Vector(10.926, 11.050, 50.353), Vector(-7.697, 19.343, 61.649), Vector(-14.101, 21.890, 80.244));
+	}
+}
+
+rule("Blizz World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Blizzard World);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(2.896, 12.721, -16.727);
+		disabled Global.Racetrack_Game = Array(Vector(2.896, 10.861, -5.612), Vector(2.971, 5.732, 22.169), Vector(-0.917, 8.128, 37.761), Vector(
+			-3.938, 9.349, 59.312), Vector(11.501, 9.593, 62.817), Vector(16.128, 5.639, 79.384), Vector(17.932, 4.073, 92.280), Vector(
+			13.439, 3.637, 111.872), Vector(1.691, 3.443, 122.166), Vector(-12.473, 2.792, 129.373), Vector(-21.958, 3.592, 131.192),
+			Vector(-38.537, 7.455, 130.551), Vector(-59.218, 10.680, 128.796), Vector(-78.028, 5.820, 123.419), Vector(-89.067, 2.717,
+			121.963), Vector(-96.101, 2.754, 129.593), Vector(-107.185, 2.304, 137.056), Vector(-119.290, 1.958, 133.480), Vector(-125.297,
+			2.844, 121.813), Vector(-124.846, 4.967, 111.856), Vector(-122.561, 7.086, 107.869), Vector(-119.618, 9.705, 106.108), Vector(
+			-114.919, 13.022, 106.732), Vector(-110.548, 14.426, 108.102), Vector(-104.890, 13.245, 110.568), Vector(-93.191, 7.953,
+			117.153), Vector(-81.449, 4.851, 121.732), Vector(-63.182, 3.815, 119.009), Vector(-58.527, 2.809, 109.112), Vector(-63.254,
+			2.226, 99.076), Vector(-63.432, 2.314, 88.024), Vector(-59.271, 2.139, 81.856), Vector(-43.925, 2.438, 76.061), Vector(-31.440,
+			3.512, 74.573), Vector(-23.075, 4.675, 80.741), Vector(-14.798, 5.252, 88.103), Vector(-7.676, 4.995, 87.449), Vector(-5.638,
+			4.891, 79.597), Vector(-7.323, 4.840, 69.597), Vector(-5.644, 4.574, 62.548), Vector(-0.035, 3.974, 55.712), Vector(6.754,
+			2.909, 46.577), Vector(8.391, 2.540, 41.395), Vector(4.184, 3.168, 34.834), Vector(2.759, 5.075, 24.408), Vector(2.949, 11.136,
+			-4.563));
+		Global.Racetrack_Game = Array(Vector(2.737, 10.076, -6.606), Vector(3.062, 5.376, 23.081), Vector(-0.791, 6.772, 41.386), Vector(
+			-1.880, 9.217, 56.438), Vector(-5.152, 7.818, 80.176), Vector(-12.063, 6.135, 89.113), Vector(-21.940, 4.720, 85.343), Vector(
+			-30.704, 2.695, 76.687), Vector(-43.714, 2.351, 76.132), Vector(-59.068, 2.138, 82.966), Vector(-63.548, 2.108, 96.481),
+			Vector(-59.180, 2.978, 116.094), Vector(-69.082, 3.356, 122.588), Vector(-92.969, 2.577, 123.121), Vector(-103.535, 2.116,
+			135.179), Vector(-115.923, 1.516, 133.832), Vector(-123.890, 2.471, 125.368), Vector(-119.123, 8.028, 110.659), Vector(
+			-110.384, 14.905, 110.472), Vector(-89.464, 7.037, 119.242), Vector(-60.603, 10.787, 127.821), Vector(-34.521, 8.087, 127.960),
+			Vector(-13.534, 5.841, 121.388), Vector(-1.689, 4.721, 109.937), Vector(15.053, 4.119, 92.984), Vector(12.726, 4.754, 65.827),
+			Vector(7.379, 6.389, 45.669), Vector(3.738, 6.675, 31.750), Vector(2.683, 10.426, -4.971));
+	}
+}
+
+rule("Paris")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Paris);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(10.931, 13.427, -66.633);
+		Global.Racetrack_Game = Array(Vector(1.007, 12.829, -60.611), Vector(-10.373, 12.554, -53.773), Vector(-24.306, 12.305, -44.831),
+			Vector(-24.234, 12.979, -30.846), Vector(-29.197, 12.154, -15.238), Vector(-33.783, 12.617, 2.126), Vector(-46.614, 12.209,
+			-1.218), Vector(-57.857, 13.540, -10.742), Vector(-66.806, 15.632, -22.359), Vector(-63.473, 19.980, -45.911), Vector(-56.199,
+			14.301, -64.631), Vector(-70.251, 16.947, -83.697), Vector(-82.957, 17.280, -89.141), Vector(-97.174, 16.491, -86.312), Vector(
+			-110.392, 14.187, -75.699), Vector(-116.454, 13.647, -62.244), Vector(-120.822, 13.130, -53.306), Vector(-112.887, 16.723,
+			-37.679), Vector(-99.144, 18.885, -17.815), Vector(-87.503, 20.139, -3.003), Vector(-72.408, 21.654, 11.336), Vector(-61.042,
+			21.570, 15.796), Vector(-33.438, 21.162, 2.089), Vector(-12.919, 25.762, -15.187), Vector(0.791, 22.554, -33.750), Vector(
+			14.771, 14.737, -57.447));
+	}
+}
+
+rule("Numbani")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Numbani);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(20.376, 12.067, 17.391);
+		Global.Racetrack_Game = Array(Vector(31.783, 9.875, 13.711), Vector(44.754, 8.450, 7.963), Vector(60.204, 9.339, 14.221), Vector(
+			76.694, 9.955, 10.772), Vector(97.855, 10.602, 20.495), Vector(117.929, 11.720, 27.201), Vector(132.504, 12.010, 39.295),
+			Vector(142.887, 11.817, 39.453), Vector(146.938, 9.814, 27.299), Vector(152.521, 2.522, 12.130), Vector(162.212, -0.528,
+			1.056), Vector(187.446, 1.533, 0.245), Vector(203.520, 2.466, 0.871), Vector(209.116, 2.602, 11.520), Vector(205.419, 2.257,
+			19.737), Vector(184.730, 1.237, 19.568), Vector(175.399, 0.096, 3.039), Vector(153.733, -0.676, -0.565), Vector(142.106, 0.361,
+			-9.609), Vector(125.744, 0.731, -15.959), Vector(111.781, 1.494, -28.535), Vector(99.945, 1.754, -35.999), Vector(83.567,
+			4.653, -35.840), Vector(70.678, 8.232, -33.818), Vector(57.513, 12.462, -25.529), Vector(41.807, 12.302, -8.865), Vector(
+			44.637, 13.397, 3.544), Vector(34.028, 14.447, 13.660));
+		disabled Global.Racetrack_Game = Array(Vector(27.117, 10.618, 15.140), Vector(42.746, 7.543, 8.713), Vector(61.563, 8.314, 14.655), Vector(
+			76.358, 9.470, 10.310), Vector(95.080, 9.998, 19.104), Vector(119.293, 10.042, 26.859), Vector(133.987, 10.564, 40.476),
+			Vector(143.437, 9.782, 39.452), Vector(149.054, 6.766, 15.907), Vector(157.268, 1.316, 3.026), Vector(186.459, 1.388, -1.003),
+			Vector(203.115, 2.470, 0.823), Vector(209.605, 2.661, 8.938), Vector(209.359, 2.606, 19.842), Vector(201.631, 2.301, 24.389),
+			Vector(182.712, 1.422, 15.437), Vector(173.265, -0.064, 0.230), Vector(151.905, -1.005, 9.017), Vector(140.565, -1.284,
+			17.395), Vector(119.829, -1.608, 9.698), Vector(99.400, 1.435, 21.340), Vector(77.276, 2.230, 6.991), Vector(60.788, 4.244,
+			14.723), Vector(46.748, 6.810, 8.831), Vector(27.507, 10.849, 15.031));
+	}
+}
+
+rule("Hollywood")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Hollywood);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(11.851, 12.361, 62.687);
+		Global.Racetrack_Game = Array(Vector(6.780, 10.939, 53.147), Vector(-5.810, 7.309, 28.621), Vector(-19.181, 5.906, 22.630), Vector(
+			-28, 5.039, 23.476), Vector(-45.183, 3.563, 13.953), Vector(-42.562, 4.757, 0.518), Vector(-24.031, 3.815, -7.359), Vector(
+			-12.574, 3.433, -14.067), Vector(-3.504, 5.474, -13.666), Vector(11.834, 7.270, -22.244), Vector(23.228, 7.270, -37.606),
+			Vector(27.101, 8.329, -48.498), Vector(22.339, 7.902, -66.008), Vector(13.658, 3.935, -83.459), Vector(9.021, 4.014, -90.875),
+			Vector(-15.135, 3.598, -96.502), Vector(-27.766, 3.414, -103.542), Vector(-34.860, 4.022, -120.848), Vector(-40.382, 9.683,
+			-127.590), Vector(-40.071, 9.275, -139.361), Vector(-31.419, 10.010, -144.273), Vector(-22.622, 11.045, -140.788), Vector(
+			-22.650, 10.427, -129.753), Vector(-31.880, 5.128, -121.537), Vector(-26.203, 3.161, -100.797), Vector(-11.937, 4.079,
+			-96.893), Vector(-0.063, 3.789, -94.881), Vector(11.886, 3.657, -89.437), Vector(20.571, 6.589, -67.757), Vector(15.243, 8.031,
+			-50.505), Vector(-2.817, 8.229, -37.727), Vector(-4.079, 9.772, -19.289), Vector(-7.159, 14.757, -7.849), Vector(-8.930,
+			14.562, 13.458), Vector(1.663, 12.810, 39.976), Vector(-10.994, 5.077, 63.174));
+	}
+}
+
+rule("Watchpoint Gibraltar")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Watchpoint: Gibraltar);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(9.444, 0.069, -134.213);
+		Global.Racetrack_Game = Array(Vector(18.529, 0.565, -134.037), Vector(41.683, -1.175, -128.550), Vector(45.672, -2.192, -117.336),
+			Vector(34.519, -8.116, -105.496), Vector(25.310, -4.353, -96.834), Vector(18.555, -0.639, -69.061), Vector(24.059, -1.778,
+			-55.797), Vector(53.752, 6.879, -57.895), Vector(70.841, 7.042, -42.139), Vector(81.622, 5.289, -34.017), Vector(86.718, 5.394,
+			-23.862), Vector(78.469, 4.852, -4.328), Vector(65.977, 3.390, 9.134), Vector(65.471, 9.819, 20.484), Vector(74.115, 12.321,
+			24.943), Vector(84.052, 17.909, 19.575), Vector(86.137, 14.965, 2.995), Vector(84.688, 4.729, -30.818), Vector(73.432, 4.999,
+			-36.182), Vector(49.658, -0.463, -37.024), Vector(40.088, 2.058, -49.013), Vector(25.737, 5.039, -55.473), Vector(20.496,
+			5.334, -61.103), Vector(18.854, 4.852, -75.955), Vector(26.733, 8.147, -97.651), Vector(41.984, 8.292, -115.825), Vector(
+			42.137, 8.195, -126.928), Vector(29.809, 5.222, -134.048), Vector(18.552, 0.794, -134.122));
+	}
+}
+
+rule("Runasapi")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Runasapi);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-81.924, 11.096, 30.200);
+		Global.Racetrack_Game = Array(Vector(-69.628, 8.828, 36.198), Vector(-47.861, 7.882, 40.736), Vector(-35.773, 6.255, 24.354),
+			Vector(-23.013, 5.066, 15.544), Vector(-12.459, 4.488, 21.129), Vector(-10.418, 7.552, 51.104), Vector(-1.278, 8.889, 62.655),
+			Vector(10.797, 7.457, 56.078), Vector(10.638, 4.765, 38.208), Vector(11.458, 2.736, 21.740), Vector(21.238, 3.497, 15.154),
+			Vector(32.773, 5.331, 20.547), Vector(42.015, 6.741, 37.887), Vector(64.410, 7.739, 40.778), Vector(76.342, 8.718, 25.762),
+			Vector(75.729, 11.222, 4.310), Vector(64.115, 11.340, -12.390), Vector(38.578, 20.417, -10.935), Vector(26.637, 16.617,
+			-10.622), Vector(6.555, 4.677, -9.658), Vector(-5.836, 4.436, -9.602), Vector(-22.217, 11.778, -9.794), Vector(-36.732, 20.329,
+			-10.342), Vector(-62.699, 20.479, -6.133), Vector(-81.149, 18.096, 3.544), Vector(-93.752, 17.917, 10.680));
+	}
+}
+
+rule("Colosseo")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Colosseo);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-90.607, 24.963, -34.249);
+		Global.Racetrack_Game = Array(Vector(-82.267, 20.690, -29.007), Vector(-55.994, 13.980, -17.234), Vector(-42.050, 10.476, -3.906),
+			Vector(-26.030, 7.153, 5.896), Vector(-18.745, 5.942, 11.684), Vector(1.021, 5.943, 11.402), Vector(22.452, 5.699, 10.202),
+			Vector(32.595, 6.143, 0.707), Vector(48.721, 14.322, -11.556), Vector(59.879, 16.126, -21.621), Vector(67.066, 18.722,
+			-40.178), Vector(64.445, 17.556, -59.500), Vector(47.992, 15.683, -69.215), Vector(25.550, 14.284, -59.014), Vector(9.375,
+			13.716, -48.027), Vector(-5.051, 17.723, -23.077), Vector(-22.702, 24.881, -19.027), Vector(-47.589, 21.723, -17.869), Vector(
+			-82.446, 21.028, -29.124));
+	}
+}
+
+rule("Horizon Lunar Colony")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Horizon Lunar Colony);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(25.370, 20.855, -6.643);
+		Global.Racetrack_Game = Array(Vector(37.522, 17.733, -13.274), Vector(53.096, 15.646, -25.568), Vector(52.649, 15.575, -36.410),
+			Vector(54.263, 16.157, -58.092), Vector(44.590, 18.758, -76.158), Vector(35.424, 16.084, -87.461), Vector(24.838, 10.760,
+			-88.175), Vector(-2.301, 7.968, -91.878), Vector(-13.549, 7.281, -106.714), Vector(-33.665, 6.239, -121.167), Vector(-42.132,
+			6.291, -117.656), Vector(-46.948, 7.061, -105.457), Vector(-33.360, 6.317, -96.191), Vector(-19.603, 7.352, -95.754), Vector(
+			-7.166, 10.899, -94.010), Vector(18.525, 10.621, -90.217), Vector(32.131, 10.459, -85.929), Vector(44.337, 11.322, -90.534),
+			Vector(60.153, 11.996, -86.571), Vector(77.787, 14.861, -80.178), Vector(71.560, 16.245, -68.203), Vector(50.237, 16.638,
+			-48.119), Vector(30.144, 16.983, -44.147), Vector(19.227, 16.899, -30.245), Vector(21.859, 17.116, -18.253), Vector(37.238,
+			17.318, -13.683));
+	}
+}
+
+rule("Paraiso")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Paraíso);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-50.676, 12.902, 56.768);
+		Global.Racetrack_Game = Array(Vector(-40.366, 9.040, 45.388), Vector(-22.480, 2.544, 20.652), Vector(-14.472, 1.766, 11.069),
+			Vector(-17.619, 2.385, -2.307), Vector(-13.005, 10.038, -20.632), Vector(-15.388, 10.636, -32.491), Vector(-9.120, 19.060,
+			-50.178), Vector(-3.124, 19.954, -61.828), Vector(2.276, 15.435, -79.872), Vector(3.048, 7.230, -96.952), Vector(-6.525, 6.175,
+			-108.911), Vector(-3.114, 3.932, -122.923), Vector(-7.841, 2.913, -137.025), Vector(-17.824, 3.307, -147.168), Vector(-36.121,
+			3.453, -149.770), Vector(-48.124, 4.825, -143.703), Vector(-46.498, 5.090, -135.298), Vector(-39.147, 6.637, -130.507), Vector(
+			-26.737, 11.149, -134.206), Vector(-12.131, 11.934, -128.242), Vector(-6.221, 7.083, -109.633), Vector(2.737, 7.339, -97.992),
+			Vector(-0.975, 7.656, -73.444), Vector(5.229, 5.998, -57.852), Vector(-5.406, 2.920, -38.669), Vector(-1.427, 2.679, -25.560),
+			Vector(-17.692, 2.648, -1.151), Vector(-15.832, 2.090, 14.362), Vector(-30.399, 2.717, 29.380));
+	}
+}
+
+rule("Volskaya Industries")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Volskaya Industries);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-10.628, 9.626, 19.068);
+		Global.Racetrack_Game = Array(Vector(-15.630, 7.184, 34.912), Vector(-17.470, 5.118, 52.249), Vector(-19.993, 8.754, 70.920),
+			Vector(-29.008, 12.611, 75.678), Vector(-42.074, 13.110, 74.283), Vector(-64.946, 5.527, 52.400), Vector(-98.997, 4.859,
+			57.923), Vector(-102.755, 4.638, 66.313), Vector(-99.341, 4.866, 73.493), Vector(-86.859, 4.544, 77.395), Vector(-58.070,
+			4.933, 95.297), Vector(-28.197, 5.602, 98.226), Vector(-5.113, 0.097, 100.164), Vector(20.514, -0.988, 101.062), Vector(37.493,
+			-1.373, 89.011), Vector(39.523, -1.467, 69.684), Vector(24.011, -0.609, 46.118), Vector(0.426, 1.399, 25.545), Vector(-16.476,
+			6.793, 28.745));
+	}
+}
+
+rule("Hanamura")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Hanamura);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(69.447, 13.709, 3.227);
+		Global.Racetrack_Game = Array(Vector(55.310, 11.133, 9.266), Vector(29.707, 8.628, 11.127), Vector(5.313, 4.482, 2.078), Vector(
+			-4.063, 4.042, -8.343), Vector(-17.380, 0.756, -17.216), Vector(-26.126, 5.056, -50.521), Vector(-26.721, 3.746, -67.521),
+			Vector(-20.674, 3.591, -76.343), Vector(-0.854, 5.924, -82.080), Vector(14.102, 6.337, -74.915), Vector(28.236, 4.267,
+			-60.297), Vector(32.851, 4.951, -42.201), Vector(25.275, 3.130, -30.573), Vector(11.991, 2.447, -24.385), Vector(16.174, 2.392,
+			-6.394), Vector(28.754, 3.516, -3.708), Vector(39.216, 3.909, -11.624), Vector(57.521, 1.663, -13.342), Vector(67.340, 3.716,
+			-5.188), Vector(68.840, 6.150, 7.811));
+	}
+}
+
+rule("Circuit Royale")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Circuit royal);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-63.092, 19.061, -41.668);
+		Global.Racetrack_Game = Array(Vector(-53.641, 13.536, -41.479), Vector(-34.120, 10.550, -41.657), Vector(-21.127, 9.304, -29.655),
+			Vector(-21.983, 8.472, -9.899), Vector(-16.404, 8.064, 3.199), Vector(-5.232, 8.553, 4.751), Vector(6.568, 8.718, -4.389),
+			Vector(5.468, 13.841, -26.904), Vector(15.007, 13.063, -38.756), Vector(22.848, 16.548, -28.173), Vector(29.165, 16.369,
+			-12.011), Vector(59.743, 16.456, -9.967), Vector(64.545, 16.607, 3.808), Vector(56.732, 15.231, 19.058), Vector(66.289, 13.842,
+			33.599), Vector(85.580, 14.877, 27.167), Vector(105.150, 19.150, 23.557), Vector(105.291, 19.530, 33.537), Vector(95.396,
+			19.633, 43.823), Vector(62.500, 21.121, 53.809), Vector(41.806, 21.956, 48.069), Vector(27.022, 22.607, 40.311), Vector(11.481,
+			23.156, 31.769), Vector(2.747, 26.388, 21.349), Vector(-10.467, 19.309, 10.476), Vector(-20.481, 21.853, -0.662), Vector(
+			-35.744, 26.195, -14.557), Vector(-50.105, 20.578, -24.259), Vector(-53.734, 14.237, -41.146));
+		disabled Global.Racetrack_Game = Array(Vector(-53.641, 13.536, -41.479), Vector(-34.120, 10.550, -41.657), Vector(-21.127, 9.304, -29.655),
+			Vector(-21.983, 8.472, -9.899), Vector(-16.404, 8.064, 3.199), Vector(-5.232, 8.553, 4.751), Vector(6.568, 8.718, -4.389),
+			Vector(5.468, 13.841, -26.904), Vector(13.661, 14.298, -35.157), Vector(25.229, 14.923, -27.232), Vector(29.165, 16.369,
+			-12.011), Vector(59.743, 16.456, -9.967), Vector(64.545, 16.607, 3.808), Vector(56.732, 15.231, 19.058), Vector(66.289, 13.842,
+			33.599), Vector(85.580, 14.877, 27.167), Vector(98.234, 18.971, 29.629), Vector(106.829, 21.951, 40.140), Vector(102.886,
+			25.499, 50.033), Vector(81.812, 22.989, 56.047), Vector(53.623, 21.829, 53.647), Vector(27.022, 22.607, 40.311), Vector(11.481,
+			23.156, 31.769), Vector(2.747, 26.388, 21.349), Vector(-10.467, 19.309, 10.476), Vector(-20.481, 21.853, -0.662), Vector(
+			-35.744, 26.195, -14.557), Vector(-50.105, 20.578, -24.259), Vector(-53.734, 14.237, -41.146));
+	}
+}
+
+rule("Dorado")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Dorado);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-3.321, 10.885, 4.219);
+		Global.Racetrack_Game = Array(Vector(11.539, 3.979, 5.665), Vector(29.670, 8.829, 2.197), Vector(37.063, 18.143, -6.771), Vector(
+			41.682, 22.152, -12.468), Vector(63.967, 24.868, -20.540), Vector(81.002, 20.163, -6.788), Vector(85.286, 22.485, 15.304),
+			Vector(92.147, 23.353, 30.175), Vector(111.378, 24.212, 31.505), Vector(139.042, 13.955, 27.630), Vector(147.295, 13.668,
+			36.151), Vector(163.354, 13.845, 43.972), Vector(170.938, 14.481, 57.311), Vector(184.013, 16.787, 50.442), Vector(177.854,
+			21.545, 36.597), Vector(155.333, 15.785, 24.958), Vector(144.677, 14.299, 29.783), Vector(121.855, 13.716, 19.711), Vector(
+			123.432, 12.799, -2.438), Vector(95.706, 11.853, -20.531), Vector(87.751, 11.855, -24.141), Vector(72.063, 14.015, -14.382),
+			Vector(39.013, 8.085, -18.048), Vector(14.574, 9.578, -11.385), Vector(5.479, 9.258, -8.387), Vector(4.818, 6.764, 2.715),
+			Vector(11.840, 4.351, 5.864));
+	}
+}
+
+rule("Rialto")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Rialto);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(107.775, 4.948, -21.257);
+		Global.Racetrack_Game = Array(Vector(89.326, 5.411, -21.137), Vector(71.471, 4.702, -21.430), Vector(67.008, 5.814, -45.725),
+			Vector(44.204, 7.662, -66.725), Vector(31.899, 8.255, -66.880), Vector(9.724, 10.965, -77.426), Vector(-12.113, 14.047,
+			-77.773), Vector(-30.532, 17.601, -74.886), Vector(-39.011, 18.698, -86.257), Vector(-56.925, 13.876, -102.818), Vector(
+			-57.185, 13.208, -130.562), Vector(-47.717, 10.349, -140.716), Vector(-65.289, 10.107, -144.256), Vector(-66.629, 11.328,
+			-128.221), Vector(-57.228, 11.564, -115.606), Vector(-57.577, 16.713, -93.397), Vector(-54.803, 21.458, -70.906), Vector(
+			-41.351, 15.552, -56.166), Vector(-21.252, 8.790, -42.706), Vector(0.632, 1.365, -41.862), Vector(13.474, 9.381, -46.529),
+			Vector(31.327, 12.855, -35.043), Vector(43.825, 12.376, -11.256), Vector(71.118, 5.898, 4.977), Vector(85.665, 3.752, 3.731),
+			Vector(89.483, 5.984, -20.700));
+	}
+}
+
+rule("King's Row")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(King's Row);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-4.057, 18.303, 16.517);
+		Global.Racetrack_Game = Array(Vector(-6.018, 13.126, 1.408), Vector(-8.498, 11.226, -24.786), Vector(-17.804, 11.014, -34.361),
+			Vector(-30.674, 10.956, -33.545), Vector(-39.323, 11.011, -35.114), Vector(-63.381, 8.313, -33.252), Vector(-82.484, 8.078,
+			-40.765), Vector(-97.055, 7.241, -10.747), Vector(-117.459, 8.615, -4.016), Vector(-133.072, 9.029, 9.203), Vector(-147.825,
+			9.006, 11.021), Vector(-148.448, 7.803, 19.239), Vector(-141.217, 5.624, 23.962), Vector(-118.972, 2.534, 18.772), Vector(
+			-119.147, 3.985, -2.825), Vector(-99.890, 4.841, -9.863), Vector(-90.618, 6.485, -22.572), Vector(-83.162, 7.014, -24.805),
+			Vector(-69.482, 7.294, -20.787), Vector(-60.382, 8.092, -32.040), Vector(-48.309, 8.676, -33.428), Vector(-38.042, 3.871,
+			-24.814), Vector(-23.430, 3.716, -28.183), Vector(-11.984, 4.083, -29.041), Vector(-8.094, 7.192, -18.804), Vector(-5.964,
+			13.434, 1.557));
+	}
+}
+
+rule("Eichenwalde")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Eichenwalde);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(-11.615, 8.374, -8.658);
+		disabled Global.Racetrack_Game = Array(Vector(-6.534, 11.063, -22.158), Vector(6.604, 12.390, -26.837), Vector(13.274, 15.076, -43.445),
+			Vector(19.241, 17.252, -54.811), Vector(24.571, 19.930, -72.863), Vector(59.198, 15.140, -93.575), Vector(81.056, 16.497,
+			-94.093), Vector(88.621, 15.928, -75.294), Vector(99.450, 15.176, -72.463), Vector(101.066, 14.760, -60.344), Vector(90.115,
+			15.358, -53.731), Vector(94.862, 15.448, -41.956), Vector(117.130, 15.339, -41.104), Vector(126.556, 17.283, -35.436), Vector(
+			141.502, 17.556, -41.767), Vector(135.197, 14.673, -62.632), Vector(123.154, 14.383, -61.318), Vector(110.442, 14.814,
+			-58.905), Vector(104.815, 14.874, -52.272), Vector(103.576, 16.322, -42.237), Vector(94.604, 16.860, -39.805), Vector(90.293,
+			22.363, -59.570), Vector(88.494, 22.147, -65.975), Vector(82.160, 22.417, -70.058), Vector(66.692, 21.795, -62.287), Vector(
+			56.935, 20.520, -56.573), Vector(55.425, 19.752, -46.870), Vector(52.489, 18.981, -37.864), Vector(43.118, 16.907, -22.959),
+			Vector(30.330, 13.408, -12.461), Vector(9.838, 10.638, -6.160), Vector(-6.439, 11.471, -21.554));
+		Global.Racetrack_Game = Array(Vector(-6.534, 11.063, -22.158), Vector(6.604, 12.390, -26.837), Vector(13.274, 15.076, -43.445),
+			Vector(19.241, 17.252, -54.811), Vector(24.571, 19.930, -72.863), Vector(59.198, 15.140, -93.575), Vector(82.136, 15.835,
+			-90.764), Vector(88.474, 21.974, -67.388), Vector(94.862, 15.448, -41.956), Vector(117.130, 15.339, -41.104), Vector(126.556,
+			17.283, -35.436), Vector(141.502, 17.556, -41.767), Vector(135.197, 14.673, -62.632), Vector(123.154, 14.383, -61.318), Vector(
+			110.442, 14.814, -58.905), Vector(104.815, 14.874, -52.272), Vector(103.576, 16.322, -42.237), Vector(94.604, 16.860, -39.805),
+			Vector(87.314, 17.554, -41.937), Vector(80.011, 15.424, -54.155), Vector(75.073, 15.971, -67.317), Vector(69.583, 15.801,
+			-85.334), Vector(60.387, 14.779, -94.652), Vector(46.893, 14.642, -86.572), Vector(46.686, 14.918, -71.177), Vector(55.425,
+			19.752, -46.870), Vector(48.501, 17.701, -28.060), Vector(30.330, 13.408, -12.461), Vector(9.838, 10.638, -6.160), Vector(
+			-6.439, 11.471, -21.554));
+	}
+}
+
+rule("Empty Map (For Racetrack Creator)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		"Change the map to the map you are making a racetrack for"
+		Current Map == Map(Busan Stadium);
+		Global.Setting_RacetrackCreator == False;
+	}
+
+	actions
+	{
+		Global.Starting = Vector(0, 0, 0);
+		Global.Racetrack_Game = Empty Array;
+		"Delete all of the actions except for Teleport_Spots1, Teleport_Spots2, 2nd Starting, and 2nd Racetrack_Game (keep the 4 actions below this note)"
+		Global.Teleport_Spots1 = Array(Vector(0, 0, 0), Vector(0, 0, 0));
+		Global.Teleport_Spots2 = Array(Vector(0, 0, 0), Vector(0, 0, 0));
+	}
+}
+
+disabled rule("Racetrack Creator --------------------------------------------------------------------------------------------------------------")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Racetrack Creator Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Setting_RacetrackCreator == True;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press {0} to add ring", Input Binding String(Button(Interact))),
+			Top, 10, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press {0} to remove last placed ring", Input Binding String(
+			Button(Reload))), Top, 11, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press {0} to place starting position", Input Binding String(
+			Button(Melee))), Top, 12, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press {0} to teleport to starting position",
+			Input Binding String(Button(Ultimate))), Top, 13, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Use {0} to enter/exit noclip", Input Binding String(Button(
+			Ability 1))), Top, 10, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		disabled Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press {0} to add portal entrance", Input Binding String(Button(
+			Primary Fire))), Top, 10, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		disabled Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press {0} to add portal exit", Input Binding String(Button(
+			Ability 2))), Top, 10, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String(
+			"After finishing the track you want to create:\r\n1: Go to menu and go to Workshop Inspector"), Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("2: Go to variable target and select Global"), Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("3: Move left and find the icon with the X"), Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("4: Click on it to copy the global variables"), Left, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("5: Go to the workshop editor"), Left, 0, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("6: Find the map rule that you created earlier"), Left, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("7: Paste the variables and follow directions"), Left, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String("8: Turn off Racetrack Creator and have fun!"), Left, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+	}
+}
+
+rule("Add to Racetrack")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Setting_RacetrackCreator == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Modify Global Variable(Racetrack_Game, Append To Array, Eye Position(Event Player));
+		Create Icon(All Players(All Teams), Eye Position(Event Player), Arrow: Down, Visible To, Color(White), True);
+		Global.RacetrackCreator_Icons[Count Of(Global.Racetrack_Game) + -1] = Last Created Entity;
+		Create Effect(All Players(All Teams), Good Aura, Color(Green), Eye Position(Event Player), 2.500, None);
+		Global.RacetrackCreator_Effects[Count Of(Global.Racetrack_Game) + -1] = Last Created Entity;
+	}
+}
+
+rule("Remove from Racetrack")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Setting_RacetrackCreator == True;
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Destroy Effect(Last Of(Global.RacetrackCreator_Effects));
+		Destroy Icon(Last Of(Global.RacetrackCreator_Icons));
+		Modify Global Variable(RacetrackCreator_Effects, Remove From Array By Index, Count Of(Global.RacetrackCreator_Effects) - 1);
+		Modify Global Variable(RacetrackCreator_Icons, Remove From Array By Index, Count Of(Global.RacetrackCreator_Icons) - 1);
+		Modify Global Variable(Racetrack_Game, Remove From Array By Index, Count Of(Global.Racetrack_Game) - 1);
+	}
+}
+
+rule("Place Starting Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Setting_RacetrackCreator == True;
+		Is Button Held(Event Player, Button(Melee)) == True;
+	}
+
+	actions
+	{
+		Skip If(Global.Starting != 0, 1);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Create Icon(All Players(All Teams), Global.Starting, Flag, Visible To and Position, Color(White), True);
+		Global.Starting = Position Of(Event Player);
+	}
+}
+
+rule("Teleport to Starting Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Setting_RacetrackCreator == True;
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Skip If(Global.Starting == 0, 3);
+		Apply Impulse(Event Player, Velocity Of(Event Player) * -1, 0.001, To World, Cancel Contrary Motion);
+		Teleport(Event Player, First Of(Global.Starting));
+		Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Global.Racetrack_Game[0]), To World);
+	}
+}
+
+rule("Movement Collision Test")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Setting_RacetrackCreator == True;
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Disable Movement Collision With Environment(Event Player, True);
+		Wait Until(Is Using Ability 1(Event Player) == False, 99999);
+		Enable Movement Collision With Environment(Event Player);
+	}
+}
+
+disabled rule("Add Portal Entrance")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+		Global.Setting_RacetrackCreator == True;
+	}
+
+	actions
+	{
+		Modify Global Variable(Teleport_Spots1, Append To Array, Eye Position(Event Player));
+		Wait(0.500, Abort When False);
+		Modify Global Variable(Teleport_Spots1, Remove From Array By Value, Last Of(Global.Teleport_Spots1));
+		Wait(1, Abort When False);
+		Modify Global Variable(Teleport_Spots1, Remove From Array By Value, Last Of(Global.Teleport_Spots1));
+	}
+}
+
+disabled rule("Add Portal Exit")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 2)) == True;
+		Global.Setting_RacetrackCreator == True;
+	}
+
+	actions
+	{
+		Modify Global Variable(Teleport_Spots2, Append To Array, Eye Position(Event Player));
+		Wait(0.500, Abort When False);
+		Modify Global Variable(Teleport_Spots1, Remove From Array By Value, Last Of(Global.Teleport_Spots1));
+		Wait(1, Abort When False);
+		Modify Global Variable(Teleport_Spots1, Remove From Array By Value, Last Of(Global.Teleport_Spots1));
+	}
+}

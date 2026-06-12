@@ -1,0 +1,149 @@
+// ============================================================
+// STADIUM SHOP — minimal Stadium-style economy
+// Earn cash on final blows, walk into a sphere to buy an upgrade.
+// Designed to be assembled after stadium-try.ow (7X3PY); variable
+// slots 30+/44+ avoid every slot that script uses.
+// ============================================================
+
+variables
+{
+	global:
+		30: ShopDamageBtnPos
+		31: ShopSpeedBtnPos
+
+	player:
+		44: ShopCash
+		45: ShopDamageBoost
+		46: ShopSpeedBoost
+}
+
+rule("[Shop:Init] Place buy buttons near host spawn")
+{
+	event
+	{
+		Player Joined Match;
+		Team 1;
+		Slot 0;
+	}
+
+	actions
+	{
+		"Wait for spawn so position and facing are valid"
+		Wait(2, Ignore Condition);
+		Global.ShopDamageBtnPos = World Vector Of(Vector(-1.500, 0.500, 4), Event Player, Rotation And Translation);
+		Global.ShopSpeedBtnPos = World Vector Of(Vector(1.500, 0.500, 4), Event Player, Rotation And Translation);
+		Create Effect(All Players(All Teams), Sphere, Color(Orange), Global.ShopDamageBtnPos, 0.500, Color);
+		Create In-World Text(All Players(All Teams), Custom String("+10% Damage ($500) - walk in to buy"), Global.ShopDamageBtnPos + Vector(
+			0, 1, 0), 1, Do Not Clip, Visible To Position and String, Color(Orange), Default Visibility);
+		Create Effect(All Players(All Teams), Sphere, Color(Sky Blue), Global.ShopSpeedBtnPos, 0.500, Color);
+		Create In-World Text(All Players(All Teams), Custom String("+10% Speed ($300) - walk in to buy"), Global.ShopSpeedBtnPos + Vector(0,
+			1, 0), 1, Do Not Clip, Visible To Position and String, Color(Sky Blue), Default Visibility);
+	}
+}
+
+rule("[Shop:Init] Starting cash")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.ShopCash = 1000;
+	}
+}
+
+rule("[Shop:OnEvent] Earn cash on final blow")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.ShopCash += 100;
+	}
+}
+
+rule("[Shop:HUD] Show cash and upgrades")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("Cash: ${0}", Event Player.ShopCash), Custom String("Damage +{0}% | Speed +{1}%",
+			Event Player.ShopDamageBoost, Event Player.ShopSpeedBoost), Null, Left, 1, Color(Green), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("[Shop:Loop] Buy damage upgrade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is Dummy Bot(Event Player) == False;
+		Distance Between(Position Of(Event Player), Global.ShopDamageBtnPos) <= 1.500;
+		Event Player.ShopCash >= 500;
+	}
+
+	actions
+	{
+		Event Player.ShopCash -= 500;
+		Event Player.ShopDamageBoost += 10;
+		Set Damage Dealt(Event Player, 100 + Event Player.ShopDamageBoost);
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Orange), Global.ShopDamageBtnPos, 1.500);
+		Play Effect(Event Player, Buff Explosion Sound, Color(White), Event Player, 100);
+		"1s cooldown; standing in the sphere keeps buying"
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("[Shop:Loop] Buy speed upgrade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is Dummy Bot(Event Player) == False;
+		Distance Between(Position Of(Event Player), Global.ShopSpeedBtnPos) <= 1.500;
+		Event Player.ShopCash >= 300;
+	}
+
+	actions
+	{
+		Event Player.ShopCash -= 300;
+		Event Player.ShopSpeedBoost += 10;
+		Set Move Speed(Event Player, 100 + Event Player.ShopSpeedBoost);
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Sky Blue), Global.ShopSpeedBtnPos, 1.500);
+		Play Effect(Event Player, Buff Explosion Sound, Color(White), Event Player, 100);
+		"1s cooldown; standing in the sphere keeps buying"
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}

@@ -1,0 +1,8 @@
+{
+  "out": "stadium-extended.ow",
+  "settings": "settings/stadium-practice-range.ow",
+  "rules": [
+    "stadium-try.ow",
+    "rules/stadium-shop.ow"
+  ]
+}
