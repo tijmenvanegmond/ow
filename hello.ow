@@ -48,8 +48,7 @@ rule("Quick Start Match")
 
 // Pauses the clock and disables built-in game-mode completion so the
 // match runs forever. Flip the score and music lines as needed.
-// Enable this rule to activate.
-disabled rule("Unlimited Match — Pause Time & Disable Completion")
+rule("Unlimited Match — Pause Time & Disable Completion")
 {
 	event
 	{
@@ -73,8 +72,7 @@ disabled rule("Unlimited Match — Pause Time & Disable Completion")
 }
 
 // Awards +1 score per kill when Unlimited Match is active.
-// Enable this rule to activate.
-disabled rule("Unlimited Match — Score On Kill")
+rule("Unlimited Match — Score On Kill")
 {
 	event
 	{

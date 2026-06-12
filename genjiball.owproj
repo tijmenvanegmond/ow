@@ -1,0 +1,7 @@
+{
+  "out": "genjiball.ow",
+  "settings": "settings/genjiball.ow",
+  "rules": [
+    "imports/genjiball-v1.3.ow"
+  ]
+}

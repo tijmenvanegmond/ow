@@ -1,97 +1,3 @@
-// Assembled from: imports/genjiball-v1.3.ow
-// DO NOT EDIT — edit the source files and re-run assemble.js
-
-
-settings
-{
-	main
-	{
-		Description: "Welcome to Genji Ball! Thanks for enjoying the game! Engage in tournaments and events on: discord.gg/genjiball. For further insights visit: workshop.codes/genjiball.            Do not hesitate to share your feedback!                                  This version was made by zSh4d0W and ØøØøØzZØøØøØ. Originally developed by u/Mazawrath. Numerous updates by members of the Official Genji Dodgeball Server."
-		Mode Name: "Genji Ball v1.3 BETA"
-	}
-
-	lobby
-	{
-		Allow Players Who Are In Queue: Yes
-		Map Rotation: After A Game
-		Match Voice Chat: Enabled
-		Max FFA Players: 10
-		Max Spectators: 12
-		Return To Lobby: Never
-	}
-
-	modes
-	{
-		Deathmatch
-		{
-			enabled maps
-			{
-				Workshop Island Night 972777519512064579
-			}
-		}
-
-		General
-		{
-			Allow Hero Switching: Disabled
-			Game Mode Start: Immediately
-			Hero Limit: Off
-			Kill Cam: Disabled
-			Respawn As Random Hero: Enabled
-			Score To Win: 50
-			Self Initiated Respawn: Off
-		}
-	}
-
-	heroes
-	{
-		General
-		{
-			Genji
-			{
-				Deflect Cooldown Time: 0%
-				Jump Vertical Speed: 100%
-				Movement Gravity: 100%
-				Movement Speed: 100%
-				No Ammunition Requirement: On
-				Primary Fire: Disabled
-				Projectile Speed: 120%
-				Quick Melee: Disabled
-				Secondary Fire: Disabled
-				Swift Strike Cooldown Time: 38%
-				Ultimate Generation - Combat Dragonblade: 0%
-				Ultimate Generation - Passive Dragonblade: 0%
-			}
-
-			enabled heroes
-			{
-				Genji
-			}
-		}
-	}
-
-	workshop
-	{
-		acceleration 25 => 0.25 per second: 40
-		bot: On
-		bounce pads: On
-		spawn speed: 6
-	}
-
-	extensions
-	{
-		Beam Sounds
-		Buff Status Effects
-		Debuff Status Effects
-		Buff and Debuff Sounds
-		Energy Explosion Effects
-		Kinetic Explosion Effects
-		Explosion Sounds
-		Play More Effects
-		Spawn More Dummy Bots
-		Projectiles
-	}
-}
-
 variables
 {
 	global:
@@ -177,6 +83,7 @@ variables
 		86: ballCollisionDetected
 		87: presetMode
 		88: motionMultiplier
+
 	player:
 		0: hasMoved
 		2: bouncePadCooldown
@@ -205,7 +112,6 @@ subroutines
 	8: alert
 }
 
-// ── imports/genjiball-v1.3.ow ───────────────────────────────────
 rule("Old description (for historical archival)")
 {
 	event
@@ -235,7 +141,7 @@ rule("Settings - Workshop settings")
 
 	actions
 	{
-		Global.ballSpawnSpeed = Workshop Setting Integer(Custom String("ball"), Custom String("spawn speed"), 40, 0, 200, 0);
+		Global.ballSpawnSpeed = Workshop Setting Integer(Custom String("ball"), Custom String("spawn speed"), 55, 0, 200, 0);
 		Global.ballSpeedCap = Workshop Setting Integer(Custom String("ball"), Custom String("max speed"), 800, 60, 800, 1);
 		Global.ballAcceleration = Workshop Setting Integer(Custom String("ball"), Custom String("acceleration (25 => 0.25 per second)"),
 			25, 0, 300, 2) / 100;
@@ -399,7 +305,7 @@ rule("Initialization - Set Workshop Island")
 	{
 		Global.circleCenter = Vector(0, 1.199, 0);
 		Global.SphereSize = 60;
-		Global.BallNoDownY = -0.285;
+		Global.BallNoDownY = -1;
 	}
 }
 
@@ -534,7 +440,7 @@ rule("Initialization - player variables")
 
 	actions
 	{
-		Set Status(Event Player, Null, Invincible, 9999);
+		disabled Set Status(Event Player, Null, Invincible, 9999);
 		Skip If(Global.CooldownDashingEnabled, 1);
 		Set Ability 1 Enabled(Event Player, False);
 		Disable Built-In Game Mode Respawning(Event Player);
@@ -1114,7 +1020,7 @@ rule("Player joins game")
 	actions
 	{
 		Skip If(!Global.RoundInProgress || !Is Game In Progress, 1);
-		Kill(Event Player, Null);
+		disabled Kill(Event Player, Null);
 		Teleport(Event Player, Global.circleCenter + Vector(Random Integer(-10, 10), 8, Random Integer(-10, 10)));
 		Event Player.hasMoved = True;
 	}
@@ -3620,5 +3526,21 @@ disabled rule("zBozo - face when Deflecting")
 			Direction and Turn Rate);
 		Wait(0.300, Ignore Condition);
 		Loop If Condition Is True;
+	}
+}
+
+rule("Rule 117")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Rule 118")
+{
+	event
+	{
+		Ongoing - Global;
 	}
 }

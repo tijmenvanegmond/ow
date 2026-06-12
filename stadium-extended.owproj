@@ -2,7 +2,7 @@
   "out": "stadium-extended.ow",
   "settings": "settings/stadium-practice-range.ow",
   "rules": [
-    "stadium-try.ow",
+    "imports/7X3PY-stadium-sandbox.ow",
     "rules/stadium-shop.ow"
   ]
 }

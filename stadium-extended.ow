@@ -1,4 +1,4 @@
-// Assembled from: stadium-try.ow, rules/stadium-shop.ow
+// Assembled from: imports/7X3PY-stadium-sandbox.ow, rules/stadium-shop.ow
 // DO NOT EDIT — edit the source files and re-run assemble.js
 
 
@@ -100,7 +100,6 @@ variables
 		46: ShopSpeedBoost
 }
 
-// ── stadium-try.ow ──────────────────────────────────────────────
 subroutines
 {
 	0: ResetEnemyBot
@@ -117,6 +116,7 @@ subroutines
 	12: OnDamage50Button
 }
 
+// ── imports/7X3PY-stadium-sandbox.ow ────────────────────────────
 rule("[Init] Setup instructions and tracking")
 {
 	event

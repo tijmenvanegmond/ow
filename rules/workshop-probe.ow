@@ -1,0 +1,42 @@
+// ============================================================
+// WORKSHOP PROBE — minimal, unmistakable proof that Workshop
+// rules are executing in the current lobby. Purely additive:
+// changes nothing about gameplay.
+// ============================================================
+
+variables
+{
+	global:
+		60: ProbeHeartbeat
+}
+
+rule("[Probe] HUD heartbeat")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Custom String("WORKSHOP ACTIVE"), Custom String("map: {0} | uptime: {1}s", Current Map,
+			Global.ProbeHeartbeat), Null, Left, 50, Color(Green), Color(White), Color(White), Visible To and String, Default Visibility);
+		Chase Global Variable At Rate(ProbeHeartbeat, 100000000, 1, Destination and Rate);
+	}
+}
+
+rule("[Probe] Join chime")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Workshop saw {0} join", Event Player));
+		Play Effect(All Players(All Teams), Buff Explosion Sound, Color(White), Position Of(Event Player), 100);
+	}
+}

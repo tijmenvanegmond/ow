@@ -1,0 +1,35 @@
+settings
+{
+	lobby
+	{
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Clash Stadium
+		{
+			Competitive Rules: Enabled
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		Control Stadium
+		{
+			Competitive Rules: Enabled
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		Payload Race Stadium
+		{
+			Competitive Rules: Enabled
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		Push Stadium
+		{
+			Competitive Rules: Enabled
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+	}
+}

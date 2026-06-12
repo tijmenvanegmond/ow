@@ -2,6 +2,54 @@
 // DO NOT EDIT — edit the source files and re-run assemble.js
 
 
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+	}
+
+	modes
+	{
+		disabled Deathmatch
+		{
+			Score To Win: 40
+		}
+
+		Team Deathmatch
+		{
+			Score To Win: 40
+
+			enabled maps
+			{
+				Black Forest 972777519512063901
+				Castillo 972777519512063901
+				Ilios Well 972777519512063901
+				Necropolis 972777519512068153
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Lifeweaver
+			{
+				Life Grip and Healing Blossom Range: 200%
+			}
+
+			enabled heroes
+			{
+				Ana
+				Lifeweaver
+				Reinhardt
+			}
+		}
+	}
+}
+
 variables
 {
 	global:

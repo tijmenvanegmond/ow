@@ -1,5 +1,6 @@
 {
   "out": "rein-and-weave.ow",
+  "settings": "settings/rein-and-weave.ow",
   "variables": {
     "global": {
       "0": "soloSpawnedT1",

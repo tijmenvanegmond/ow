@@ -1,0 +1,186 @@
+settings
+{
+	main
+	{
+		Description: "Jetpack Cat has the zoomies\r\n3N0R2 - Made by Jeshaal#1649\r\nJetpack Cat Racing Discord: dsc.gg/jetpack\r\n\r\nFor unlimited fuel: Go to lobby > Settings > Heroes > Jetpack Cat > Frenetic Flight Unlimited Fuel > Enable"
+		Mode Name: "Jetpack Cat Racing"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Max Spectators: 12
+		Max Team 1 Players: 0
+		Max Team 2 Players: 12
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Bounty Hunter
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Capture the Flag
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Clash 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Clash
+		{
+			Allow Hero Switching: Disabled
+			Capture Speed Modifier: 45%
+		}
+
+		disabled Control
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Control 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Deathmatch
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Elimination
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Escort 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Escort
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Flashpoint
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Flashpoint 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Hybrid
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Hybrid 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Practice Range
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Push 6v6
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Push
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		Skirmish
+		{
+			Allow Hero Switching: Disabled
+			Limit Valid Control Points: First
+
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Esperança
+				Hanamura Winter
+				Hanaoka
+				Hollywood Halloween
+				Junkertown
+				King's Row Winter
+				Lijiang Tower Lunar New Year
+				New Junk City
+				Oasis
+				Samoa
+				Shambali Monastery
+				Suravasa
+				Throne of Anubis
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		disabled Stadium Practice Range
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		disabled Team Deathmatch
+		{
+			Allow Hero Switching: Disabled
+		}
+
+		General
+		{
+			Hero Limit: Off
+			Kill Cam: Disabled
+			Kill Feed: Disabled
+			Respawn Time Scalar: 0%
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Jetpack Cat
+			{
+				Frenetic Flight Maximum Time: 200%
+				Frenetic Flight Recharge Rate: 300%
+				Frenetic Flight Unlimited Fuel: Enabled
+				Purr Cooldown Time: 17%
+				Spawn With Ultimate Ready: Enabled
+				Ultimate Generation - Combat Catnapper: 0%
+				Ultimate Generation - Passive Catnapper: 0%
+				Ultimate Generation Catnapper: 10%
+			}
+
+			enabled heroes
+			{
+				Jetpack Cat
+			}
+		}
+	}
+}

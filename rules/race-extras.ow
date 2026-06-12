@@ -1,0 +1,55 @@
+// ============================================================
+// RACE EXTRAS — additive layer on top of 3N0R2 (JPC Racing)
+// Live distance/standings HUD and a finish-line celebration.
+// Declares no variable slots; reads the import's player
+// variables (Racetrack, Racing, Laps_Complete) without writing.
+// ============================================================
+
+rule("[Extras:HUD] Next ring distance and live position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Null, Event Player.Racing == True ? Custom String("Next ring: {0} m", Round To Integer(
+			Distance Between(Position Of(Event Player), Event Player.Racetrack[0]), To Nearest)) : Custom String(""), Left, 20,
+			Color(White), Color(White), Color(Green), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Null, Null, Event Player.Racing == True ? Custom String("Position: {0} / {1}", 1 + Count Of(
+			Filtered Array(All Players(All Teams), Current Array Element.Racing == True && Count Of(Current Array Element.Racetrack)
+			< Count Of(Event Player.Racetrack))), Count Of(Filtered Array(All Players(All Teams),
+			Current Array Element.Racing == True))) : Custom String(""), Left, 21, Color(White), Color(White), Color(Sky Blue),
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("[Extras:OnEvent] Finish-line fireworks")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Event Player.Racetrack) == 0;
+		Event Player.Laps_Complete > 0;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Yellow), Position Of(Event Player) + Vector(0, 1, 0), 3);
+		Play Effect(All Players(All Teams), Ring Explosion Sound, Color(White), Position Of(Event Player), 100);
+		Wait(0.300, Ignore Condition);
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Orange), Position Of(Event Player) + Vector(0, 2, 0), 4);
+		Wait(0.300, Ignore Condition);
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Red), Position Of(Event Player) + Vector(0, 3, 0), 5);
+		Small Message(All Players(All Teams), Custom String("{0} finished lap {1}!", Event Player, Event Player.Laps_Complete));
+	}
+}

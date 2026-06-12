@@ -1,0 +1,15 @@
+settings
+{
+	lobby
+	{
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Clash Stadium
+		Control Stadium
+		Payload Race Stadium
+		Push Stadium
+	}
+}
