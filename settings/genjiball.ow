@@ -28,11 +28,10 @@ settings
 
 		General
 		{
-			Allow Hero Switching: Disabled
 			Game Mode Start: Immediately
 			Hero Limit: Off
-			Kill Cam: Disabled
-			Respawn As Random Hero: Enabled
+			Kill Cam: Off
+			Respawn As Random Hero: On
 			Score To Win: 50
 			Self Initiated Respawn: Off
 		}
@@ -49,10 +48,10 @@ settings
 				Movement Gravity: 100%
 				Movement Speed: 100%
 				No Ammunition Requirement: On
-				Primary Fire: Disabled
+				Primary Fire: Off
 				Projectile Speed: 120%
-				Quick Melee: Disabled
-				Secondary Fire: Disabled
+				Quick Melee: Off
+				Secondary Fire: Off
 				Swift Strike Cooldown Time: 38%
 				Ultimate Generation - Combat Dragonblade: 0%
 				Ultimate Generation - Passive Dragonblade: 0%
@@ -70,7 +69,8 @@ settings
 		acceleration 25 => 0.25 per second: 40
 		bot: On
 		bounce pads: On
-		spawn speed: 6
+		spawn speed: 30
+		water: [3]
 	}
 
 	extensions
