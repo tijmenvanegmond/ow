@@ -17,7 +17,7 @@ rule("Skip Hero Select")
 
 	actions
 	{
-		Set Match Time(1);
+		Set Match Time(0.2);
 	}
 }
 
@@ -29,9 +29,14 @@ rule("Quick Start Match")
 		Ongoing - Global;
 	}
 
+	conditions
+	{
+		Is In Setup == True;
+	}
+
 	actions
 	{
-		Set Match Time(0);
+		Set Match Time(0.2);
 	}
 }
 

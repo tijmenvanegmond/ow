@@ -26,6 +26,7 @@ variables
 		81: botLoopIndex
 		82: botCommand
 		83: botTarget
+		85: botLeashRadius
 
 	player:
 		80: botEnemy
@@ -33,6 +34,7 @@ variables
 		82: claimed
 		83: steerGoal
 		84: steerDir
+		85: leashAnchor
 }
 
 subroutines
@@ -157,25 +159,24 @@ rule("Bots — Face Target Or Movement")
 // agnostic local avoidance: rounds corners / slips past walls, no navmesh.
 rule("Bots — Steer (subroutine)")
 {
-	event
-	{
-		Subroutine;
-		BotSteer;
-	}
+    event
+    {
+        Subroutine;
+        BotSteer;
+    }
 
-	actions
-	{
-		"Rank fanned dirs by the clearer of a low/high ray (steps pass, walls block), plus a
-		small turn penalty vs last heading (hysteresis) so the bot commits instead of flapping.
-		Lower rank = better. Tune the 0.020 hysteresis weight to taste."
-		Event Player.steerDir = First Of(Sorted Array(Mapped Array(Array(0, 25, -25, 50, -50, 75, -75, 110, -110), Direction From Angles(
-			Horizontal Angle From Direction(Direction Towards(Position Of(Event Player), Event Player.steerGoal)) + Current Array Element,
-			0)), -1 * Max(Distance Between(Position Of(Event Player) + Up * 0.300, Ray Cast Hit Position(Position Of(Event Player) + Up
-			* 0.300, Position Of(Event Player) + Up * 0.300 + Current Array Element * 4, Null, Event Player, False)), Distance Between(
-			Position Of(Event Player) + Up * 1.200, Ray Cast Hit Position(Position Of(Event Player) + Up * 1.200, Position Of(Event Player)
-			+ Up * 1.200 + Current Array Element * 4, Null, Event Player, False))) + Angle Between Vectors(Current Array Element,
-			Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir) * 0.020));
-	}
+    actions
+    {
+        "Rank fanned dirs by the safest of a low/high ray (Min), but raised to 0.7m so it clears stairs. Lower rank = better. Hysteresis (0.010) stops flapping; Goal Focus (0.015) pulls the bot back to the leash."
+        Event Player.steerDir = First Of(Sorted Array(Mapped Array(Array(0, 25, -25, 50, -50, 75, -75, 110, -110), Direction From Angles(
+            Horizontal Angle From Direction(Direction Towards(Position Of(Event Player), Event Player.steerGoal)) + Current Array Element,
+            0)), -1 * Min(Distance Between(Position Of(Event Player) + Up * 0.700, Ray Cast Hit Position(Position Of(Event Player) + Up
+            * 0.700, Position Of(Event Player) + Up * 0.700 + Current Array Element * 4, Null, Event Player, False)), Distance Between(
+            Position Of(Event Player) + Up * 1.200, Ray Cast Hit Position(Position Of(Event Player) + Up * 1.200, Position Of(Event Player)
+            + Up * 1.200 + Current Array Element * 4, Null, Event Player, False))) + Angle Between Vectors(Current Array Element,
+            Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir) * 0.010 + Angle Between Vectors(
+            Current Array Element, Direction Towards(Position Of(Event Player), Event Player.steerGoal)) * 0.015));
+    }
 }
 
 // Walk toward the current enemy until within melee-ish range (unless commanded).
@@ -194,8 +195,10 @@ rule("Bots — Approach Enemy")
 		Is Alive(Event Player) == True;
 		Event Player.botCommanded == False;
 		Event Player.botEnemy != Null;
-		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 4;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 3;
 		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) <= 20;
+		"Leash: only chase while near the bot's leashAnchor (consumer sets it; botLeashRadius > 0 enables, 0 = chase anywhere)."
+		(Global.botLeashRadius == 0 || Distance Between(Position Of(Event Player), Event Player.leashAnchor) <= Global.botLeashRadius) == True;
 	}
 
 	actions

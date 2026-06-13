@@ -17,19 +17,14 @@ settings
 		{
 			enabled maps
 			{
-				Antarctic Peninsula
-				Busan
 				Ilios
-				Lijiang Tower
-				Nepal
-				Oasis
-				Samoa
 			}
 		}
 
 		General
 		{
 			Game Mode Start: Immediately
+			Limit Valid Control Points: Third //First, Second or Third
 		}
 	}
 }

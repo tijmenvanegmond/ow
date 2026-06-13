@@ -21,6 +21,10 @@ variables
 		0: commander
 		1: cmdMarker
 		2: cmdRangeMarker
+		3: leashCustom
+		4: leashSetTime
+		5: rallyMarker
+		6: rallyPoint
 }
 
 // Command radius: only Reins within this distance of a commander obey. The
@@ -35,6 +39,73 @@ rule("Reign — Init")
 	actions
 	{
 		Global.cmdRadius = 20;
+		"Bots only break off to fight within this distance of the point; beyond it they march to the point."
+		Global.botLeashRadius = 25;
+	}
+}
+
+// Each bot's leash anchor: a recently rallied point (held ~8s after the last
+// rally command) otherwise the live capture point. The brain chases/holds
+// near this anchor (see lib/bots Approach Enemy + the seek rule below).
+rule("Reign — Maintain leash anchor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Total Time Elapsed - Event Player.leashSetTime <= 8 && Event Player.leashCustom != 0);
+			Event Player.leashAnchor = Event Player.leashCustom;
+		Else;
+			Event Player.leashAnchor = Objective Position(Objective Index);
+		End;
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Rally: hold Interact + Secondary Fire to move nearby friendly Reins' leash
+// anchor to your reticle, pulling their hold-point off the objective. Combines
+// with the send command (Interact) so they also walk there.
+rule("Reign — Rally leash (Interact + Secondary Fire)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is True For Any(Filtered Array(All Players(Team Of(Event Player)), Current Array Element.claimed == True), Is Button Held(
+			Current Array Element, Button(Interact)) && Is Button Held(Current Array Element, Button(Secondary Fire)) && Distance Between(
+			Position Of(Event Player), Position Of(Current Array Element)) <= Global.cmdRadius) == True;
+	}
+
+	actions
+	{
+		Event Player.commander = First Of(Sorted Array(Filtered Array(All Players(Team Of(Event Player)), Current Array Element.claimed
+			== True && Is Button Held(Current Array Element, Button(Interact)) && Is Button Held(Current Array Element, Button(
+			Secondary Fire)) && Distance Between(Position Of(Event Player), Position Of(Current Array Element)) <= Global.cmdRadius),
+			Distance Between(Position Of(Event Player), Position Of(Current Array Element))));
+		Event Player.leashCustom = Ray Cast Hit Position(Eye Position(Event Player.commander), Eye Position(Event Player.commander)
+			+ Facing Direction Of(Event Player.commander) * 60, Null, Event Player.commander, False);
+		Event Player.leashSetTime = Total Time Elapsed;
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
 
@@ -158,13 +229,14 @@ rule("Reign — Bots seek the point")
 		Event Player.claimed == False;
 		Is Alive(Event Player) == True;
 		Event Player.botCommanded == False;
-		Is On Objective(Event Player) == False;
-		(Event Player.botEnemy == Null || Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 20) == True;
+		Distance Between(Position Of(Event Player), Event Player.leashAnchor) > 3;
+		(Distance Between(Position Of(Event Player), Event Player.leashAnchor) > Global.botLeashRadius || Event Player.botEnemy == Null
+			|| Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 20) == True;
 	}
 
 	actions
 	{
-		Event Player.steerGoal = Objective Position(Objective Index);
+		Event Player.steerGoal = Event Player.leashAnchor;
 		Call Subroutine(BotSteer);
 		Start Throttle In Direction(Event Player, Event Player.steerDir, 1, To World, Replace existing throttle, Direction and Magnitude);
 		Wait(0.250, Ignore Condition);
@@ -223,7 +295,8 @@ rule("Reign — HUD hint")
 	actions
 	{
 		Create HUD Text(Event Player, Custom String("REIGN"), Event Player.claimed == True ? Custom String(
-			"Hold {0} to send  ·  +{1} to charge", Input Binding String(Button(Interact)), Input Binding String(Button(Primary Fire)))
+			"Hold {0} send · +{1} charge · +{2} rally", Input Binding String(Button(Interact)), Input Binding String(Button(Primary Fire)),
+			Input Binding String(Button(Secondary Fire)))
 			: Custom String("Press {0} to take command", Input Binding String(Button(Interact))), Null, Left, 0, Color(Sky Blue),
 			Color(White), Color(White), Visible To and String, Default Visibility);
 	}

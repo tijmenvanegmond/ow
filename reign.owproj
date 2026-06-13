@@ -2,7 +2,7 @@
   "out": "build/reign.ow",
   "settings": "settings/reign.ow",
   "rules": [
-    { "file": "lib/match-control.ow", "rules": ["Skip Hero Select"] },
+    { "file": "lib/match-control.ow", "rules": ["Skip Hero Select", "Quick Start Match"] },
     "lib/bots.ow",
     "rules/reinbot.ow",
     "rules/reign.ow"
