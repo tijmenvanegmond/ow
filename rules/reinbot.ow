@@ -1,0 +1,100 @@
+// ============================================================
+// REINBOT — Reinhardt combat layer (uses lib/bots.ow perception)
+//
+// Reads Event Player.botEnemy (set by "Bots — Acquire Nearest Enemy") and
+// attacks when not commanded (Event Player.botCommanded == False). Movement
+// and facing come from lib/bots.ow; this file only adds ability usage.
+// Reinhardt: Primary Fire = hammer swing, Ability 1 = Charge, Ability 2 =
+// Fire Strike.
+// ============================================================
+
+// Swing the hammer while an enemy is in melee range.
+rule("Reinbot — Swing hammer in melee")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Event Player.botEnemy != Null;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) <= 5;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Button(Primary Fire));
+		Wait(0.700, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Throw Fire Strike at a mid-range enemy whenever it is off cooldown.
+rule("Reinbot — Fire Strike at range")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Event Player.botEnemy != Null;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) <= 30;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Event Player.botEnemy), Barriers Do Not Block LOS) == True;
+		Ability Cooldown(Event Player, Button(Ability 2)) == 0;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Button(Ability 2));
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Charge a mid-range enemy in line of sight. Charge has no pathing, so it can
+// still fling bots into walls/off ledges — limited to visible enemies in a
+// 12-35m band to keep it mostly sane.
+rule("Reinbot — Charge a mid-range enemy")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Event Player.botEnemy != Null;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 12;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) <= 35;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Event Player.botEnemy), Barriers Do Not Block LOS) == True;
+		Ability Cooldown(Event Player, Button(Ability 1)) == 0;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Button(Ability 1));
+		Wait(8, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}

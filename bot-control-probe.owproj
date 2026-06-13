@@ -1,0 +1,8 @@
+{
+  "out": "build/bot-control-probe.ow",
+  "settings": "settings/probe.ow",
+  "rules": [
+    "lib/match-control.ow",
+    "rules/bot-control-probe.ow"
+  ]
+}

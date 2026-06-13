@@ -1,0 +1,35 @@
+settings
+{
+	main
+	{
+		Mode Name: "REIGN"
+	}
+
+	lobby
+	{
+		Max Team 1 Players: 6
+		Max Team 2 Players: 6
+	}
+
+	modes
+	{
+		Control
+		{
+			enabled maps
+			{
+				Antarctic Peninsula
+				Busan
+				Ilios
+				Lijiang Tower
+				Nepal
+				Oasis
+				Samoa
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+}

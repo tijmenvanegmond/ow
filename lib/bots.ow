@@ -1,0 +1,281 @@
+// ============================================================
+// BOTS — spawn, perceive, and command bots (claim-based control)
+//
+// CONTROL MODEL: every entity is treated as a bot (claimed == False) and runs
+// the brain below, UNTIL it claims itself as human (claimed == True, set by a
+// consumer rule on a button press). This sidesteps the fact that lobby-AI
+// players are indistinguishable from humans (Is Dummy Bot is False for both)
+// and uncontrollable by throttle — so fill empty slots with Create Dummy Bot
+// bots (controllable, never self-claim), NOT lobby AI.
+//
+// The brain: each unclaimed living entity acquires the nearest visible enemy
+// (botEnemy), faces it, and approaches it. Hero attacks live in a consumer
+// layer (rules/reinbot.ow). A command layer sets botCommanded = True to drive
+// the entity directly; the brain yields while commanded.
+//
+// Movement uses raycast wall avoidance (BotSteer): no navmesh, works on any
+// map, rounds corners and slips past walls — but it's local-only, so it can
+// stick in concave dead-ends. Variables use high slots to avoid clashing with
+// mode globals when merged by assemble.js.
+// ============================================================
+
+variables
+{
+	global:
+		80: botsSpawned
+		81: botLoopIndex
+		82: botCommand
+		83: botTarget
+
+	player:
+		80: botEnemy
+		81: botCommanded
+		82: claimed
+		83: steerGoal
+		84: steerDir
+}
+
+subroutines
+{
+	0: BotSteer
+}
+
+// Spawn the squad once the match starts: 3 Reinhardt dummy bots per team in
+// slots 1-3. Change the hero, the loop end (count), and the teams to taste.
+rule("Bots — Spawn Squad On Match Start")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.botsSpawned == False;
+	}
+
+	actions
+	{
+		Global.botsSpawned = True;
+		For Global Variable(botLoopIndex, 1, 6, 1);
+			"Kill right after creating: Create Dummy Bot can drop them at origin, so let
+			Quick Respawn place them properly in the spawn room."
+			Create Dummy Bot(Hero(Reinhardt), Team 1, Global.botLoopIndex, Null, Null);
+			Kill(Last Created Entity, Null);
+			Create Dummy Bot(Hero(Reinhardt), Team 2, Global.botLoopIndex, Null, Null);
+			Kill(Last Created Entity, Null);
+			Wait(0.250, Ignore Condition);
+		End;
+	}
+}
+
+// Respawn any dummy bot 2s after it dies, so the squad recovers.
+rule("Bots — Quick Respawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is Dead(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(2, Ignore Condition);
+		Respawn(Event Player);
+	}
+}
+
+// Perception: each unclaimed living entity tracks the nearest enemy — the
+// nearest in line of sight, falling back to nearest overall.
+rule("Bots — Acquire Nearest Enemy")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.botEnemy = First Of(Append To Array(Sorted Array(Filtered Array(All Living Players(Opposite Team Of(Team Of(
+			Event Player))), Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element), Barriers Do Not Block LOS)),
+			Distance Between(Position Of(Event Player), Position Of(Current Array Element))), Sorted Array(All Living Players(
+			Opposite Team Of(Team Of(Event Player))), Distance Between(Position Of(Event Player), Position Of(Current Array Element)))));
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Direct the bot's vision: face the current enemy if it has one, otherwise
+// face the direction it is steering/moving (so it looks where it walks).
+// Yields while commanded.
+rule("Bots — Face Target Or Movement")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Event Player.botEnemy != Null ? Direction Towards(Eye Position(Event Player), Eye Position(
+			Event Player.botEnemy)) : (Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir), 200,
+			To World, Direction and Turn Rate);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Stop Facing(Event Player);
+	}
+}
+
+// Steering with wall avoidance: given Event Player.steerGoal (a position),
+// fan candidate directions around the goal heading, raycast each against map
+// geometry at body height, and pick the clearest — set into steerDir. Map-
+// agnostic local avoidance: rounds corners / slips past walls, no navmesh.
+rule("Bots — Steer (subroutine)")
+{
+	event
+	{
+		Subroutine;
+		BotSteer;
+	}
+
+	actions
+	{
+		"Rank fanned dirs by the clearer of a low/high ray (steps pass, walls block), plus a
+		small turn penalty vs last heading (hysteresis) so the bot commits instead of flapping.
+		Lower rank = better. Tune the 0.020 hysteresis weight to taste."
+		Event Player.steerDir = First Of(Sorted Array(Mapped Array(Array(0, 25, -25, 50, -50, 75, -75, 110, -110), Direction From Angles(
+			Horizontal Angle From Direction(Direction Towards(Position Of(Event Player), Event Player.steerGoal)) + Current Array Element,
+			0)), -1 * Max(Distance Between(Position Of(Event Player) + Up * 0.300, Ray Cast Hit Position(Position Of(Event Player) + Up
+			* 0.300, Position Of(Event Player) + Up * 0.300 + Current Array Element * 4, Null, Event Player, False)), Distance Between(
+			Position Of(Event Player) + Up * 1.200, Ray Cast Hit Position(Position Of(Event Player) + Up * 1.200, Position Of(Event Player)
+			+ Up * 1.200 + Current Array Element * 4, Null, Event Player, False))) + Angle Between Vectors(Current Array Element,
+			Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir) * 0.020));
+	}
+}
+
+// Walk toward the current enemy until within melee-ish range (unless commanded).
+rule("Bots — Approach Enemy")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Event Player.botEnemy != Null;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 4;
+		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) <= 20;
+	}
+
+	actions
+	{
+		Event Player.steerGoal = Position Of(Event Player.botEnemy);
+		Call Subroutine(BotSteer);
+		Start Throttle In Direction(Event Player, Event Player.steerDir, 1, To World, Replace existing throttle, Direction and Magnitude);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// ── Command examples (disabled) — most modes write their own scoped command ──
+
+// Drive every unclaimed entity toward Global.botTarget while botCommand == 1.
+disabled rule("Bots — Command Move To Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Global.botCommand == 1;
+	}
+
+	actions
+	{
+		Event Player.botCommanded = True;
+		Start Throttle In Direction(Event Player, Direction Towards(Position Of(Event Player), Global.botTarget), 1, To World,
+			Replace existing throttle, Direction and Magnitude);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Event Player.botCommanded = False;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// Press Button reaches dummy bots and humans (and even lobby AI).
+disabled rule("Bots — Command Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Global.botCommand == 2;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Button(Jump));
+		Wait(0.500, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Removes the spawned squad (mirror of the spawn slots/teams above).
+disabled rule("Bots — Despawn Squad")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		For Global Variable(botLoopIndex, 1, 4, 1);
+			Destroy Dummy Bot(Team 1, Global.botLoopIndex);
+			Destroy Dummy Bot(Team 2, Global.botLoopIndex);
+		End;
+	}
+}

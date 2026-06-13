@@ -16,7 +16,9 @@ node assemble.js <manifest.owproj>     # e.g. node assemble.js rein-and-weave.ow
 
 Manifests exist for all modes: `brigbonk`, `hello`, `rein-and-weave`, `stadium-extended`, `stadium-probe`, `jpc-racing`, `jpc-racing-extended`, `genjiball`. To rebuild everything: `for m in *.owproj; do node assemble.js $m; done` (bash).
 
-A `.owproj` manifest is JSON: `out` (output file), optional `settings` (lobby settings file, prepended verbatim), optional `variables`/`subroutines` seed declarations, and `rules` (ordered list of source `.ow` files). `assemble.js` merges all `variables` and `subroutines` blocks found in sources into single declaration blocks (manifest wins on slot conflicts) and concatenates the rules. If a source file starts with a `settings` block (a full lobby copy), it is harvested as a fallback when the manifest names no settings file.
+A `.owproj` manifest is JSON: `out` (output file), optional `settings` (lobby settings file, prepended verbatim), optional `variables`/`subroutines` seed declarations, and `rules` (ordered list of sources). `assemble.js` merges all `variables` and `subroutines` blocks found in sources into single declaration blocks (manifest wins on slot conflicts) and concatenates the rules. If a source file starts with a `settings` block (a full lobby copy), it is harvested as a fallback when the manifest names no settings file.
+
+A `rules` entry is either a path string (include the whole file) or `{ "file": "...", "rules": ["Rule Name", ...] }` to include only the named rule(s) from that file — handy for pulling one rule out of a lib without its siblings (e.g. just `Skip Hero Select` from `lib/match-control.ow`). Either form still harvests that file's variables/subroutines/settings.
 
 **Never edit anything in `build/` directly** — outputs start with a `// Assembled from: ... DO NOT EDIT` header. Edit the sources and re-run `assemble.js`.
 

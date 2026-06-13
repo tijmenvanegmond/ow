@@ -1,0 +1,10 @@
+{
+  "out": "build/reign.ow",
+  "settings": "settings/reign.ow",
+  "rules": [
+    { "file": "lib/match-control.ow", "rules": ["Skip Hero Select"] },
+    "lib/bots.ow",
+    "rules/reinbot.ow",
+    "rules/reign.ow"
+  ]
+}

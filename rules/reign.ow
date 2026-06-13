@@ -1,0 +1,230 @@
+// ============================================================
+// REIGN — Reinhardt control sandbox (claim-based control, Control mode)
+//
+// Everyone starts as a bot (claimed == False) running the lib/bots brain +
+// reinbot attacks. Press Interact to CLAIM yourself as a human commander —
+// that frees your own movement and lets you (while holding Interact) send your
+// team's still-unclaimed Reins toward your reticle. Release hands them back to
+// the brain. Fill empty slots with dummy bots, not lobby AI (see lib/bots.ow).
+//
+// Runs on Control mode: bots seek the objective when no enemy is near, so they
+// contest the point. Scoring/capture is the built-in Control mode (not
+// disabled here) — Objective Position(Objective Index) / Is On Objective come from the mode.
+// ============================================================
+
+variables
+{
+	global:
+		0: cmdRadius
+
+	player:
+		0: commander
+		1: cmdMarker
+		2: cmdRangeMarker
+}
+
+// Command radius: only Reins within this distance of a commander obey. The
+// radius follows the commander, so you lead the squad rather than puppet the map.
+rule("Reign — Init")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.cmdRadius = 20;
+	}
+}
+
+// Press Interact once to claim yourself as a human: stops the brain from
+// driving you and marks you a commander. Dummy bots never trigger this.
+rule("Reign — Claim as human (Interact)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.claimed == False;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.claimed = True;
+		Stop Throttle In Direction(Event Player);
+		Stop Facing(Event Player);
+		Small Message(Event Player, Custom String("You have taken command"));
+	}
+}
+
+// While a claimed commander holds Interact, drive each still-unclaimed Rein on
+// their team toward the commander's reticle. botCommanded suspends that bot's
+// brain so the two never fight; releasing restores autonomy.
+rule("Reign — Command bots to reticle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is True For Any(Filtered Array(All Players(Team Of(Event Player)), Current Array Element.claimed == True), Is Button Held(
+			Current Array Element, Button(Interact)) && Distance Between(Position Of(Event Player), Position Of(Current Array Element))
+			<= Global.cmdRadius) == True;
+	}
+
+	actions
+	{
+		Event Player.botCommanded = True;
+		Event Player.commander = First Of(Sorted Array(Filtered Array(All Players(Team Of(Event Player)), Current Array Element.claimed
+			== True && Is Button Held(Current Array Element, Button(Interact)) && Distance Between(Position Of(Event Player), Position Of(
+			Current Array Element)) <= Global.cmdRadius), Distance Between(Position Of(Event Player), Position Of(Current Array Element))));
+		Start Throttle In Direction(Event Player, Direction Towards(Position Of(Event Player), Ray Cast Hit Position(Eye Position(
+			Event Player.commander), Eye Position(Event Player.commander) + Facing Direction Of(Event Player.commander) * 60, Null,
+			Event Player.commander, False)), 1, To World, Replace existing throttle, Direction and Magnitude);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Event Player.botCommanded = False;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// Hold Interact + Primary Fire: each commanded Rein faces the commander's
+// reticle and Charges toward it (off cooldown). The send command above keeps
+// botCommanded set while Interact is held, so the brain stays suspended.
+rule("Reign — Command charge (Interact + Primary Fire)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is Alive(Event Player) == True;
+		Ability Cooldown(Event Player, Button(Ability 1)) == 0;
+		Is True For Any(Filtered Array(All Players(Team Of(Event Player)), Current Array Element.claimed == True), Is Button Held(
+			Current Array Element, Button(Interact)) && Is Button Held(Current Array Element, Button(Primary Fire)) && Distance Between(
+			Position Of(Event Player), Position Of(Current Array Element)) <= Global.cmdRadius) == True;
+	}
+
+	actions
+	{
+		Event Player.commander = First Of(Sorted Array(Filtered Array(All Players(Team Of(Event Player)), Current Array Element.claimed
+			== True && Is Button Held(Current Array Element, Button(Interact)) && Is Button Held(Current Array Element, Button(Primary Fire))
+			&& Distance Between(Position Of(Event Player), Position Of(Current Array Element)) <= Global.cmdRadius), Distance Between(
+			Position Of(Event Player), Position Of(Current Array Element))));
+		"Snap to the reticle instantly (not a gradual turn) so the charge launches on target."
+		Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Ray Cast Hit Position(Eye Position(
+			Event Player.commander), Eye Position(Event Player.commander) + Facing Direction Of(Event Player.commander) * 60, Null,
+			Event Player.commander, False)), To World);
+		Wait(0.067, Ignore Condition);
+		Press Button(Event Player, Button(Ability 1));
+		Wait(2, Ignore Condition);
+	}
+}
+
+// Objective drive: when an unclaimed bot has no enemy within engage range and
+// is not yet on the point, walk it to the objective so the squad contests it.
+// (Approach Enemy in lib/bots handles enemies within 20m; this covers the rest.)
+rule("Reign — Bots seek the point")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Is On Objective(Event Player) == False;
+		(Event Player.botEnemy == Null || Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 20) == True;
+	}
+
+	actions
+	{
+		Event Player.steerGoal = Objective Position(Objective Index);
+		Call Subroutine(BotSteer);
+		Start Throttle In Direction(Event Player, Event Player.steerDir, 1, To World, Replace existing throttle, Direction and Magnitude);
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// Show a ring at the commander's reticle while they hold Interact (team only).
+rule("Reign — Command marker")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Create Effect(All Players(Team Of(Event Player)), Ring, Color(Sky Blue), Update Every Frame(Position Of(Event Player)),
+			Global.cmdRadius, Visible To Position and Radius);
+		Event Player.cmdRangeMarker = Last Created Entity;
+		Create Effect(All Players(Team Of(Event Player)), Ring, Color(Sky Blue), Update Every Frame(Ray Cast Hit Position(Eye Position(
+			Event Player), Eye Position(Event Player) + Facing Direction Of(Event Player) * 60, Null, Event Player, False)), 1.500,
+			Visible To Position and Radius);
+		Event Player.cmdMarker = Last Created Entity;
+		Wait Until(Is Button Held(Event Player, Button(Interact)) == False, 9999);
+		Destroy Effect(Event Player.cmdMarker);
+		Destroy Effect(Event Player.cmdRangeMarker);
+	}
+}
+
+// HUD: prompt unclaimed players to take command; show the command hint once
+// claimed. (Real player-slots only; dummy bots get nothing.)
+rule("Reign — HUD hint")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("REIGN"), Event Player.claimed == True ? Custom String(
+			"Hold {0} to send  ·  +{1} to charge", Input Binding String(Button(Interact)), Input Binding String(Button(Primary Fire)))
+			: Custom String("Press {0} to take command", Input Binding String(Button(Interact))), Null, Left, 0, Color(Sky Blue),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+	}
+}

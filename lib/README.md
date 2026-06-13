@@ -4,6 +4,7 @@ Each file is a standalone `.ow` snippet. Copy the rules you need into your scrip
 
 | File | Rules inside |
 |------|-------------|
+| `bots.ow` | Spawn Squad On Match Start, Quick Respawn, Acquire Nearest Enemy, Face Enemy, Approach Enemy, + disabled command examples (Move To Target, Jump, Despawn) |
 | `match-control.ow` | Skip Hero Select, Quick Start, Unlimited Match (disabled), Score On Kill (disabled) |
 | `movement.ow` | Jump Boost, Ult Launch, Air Stabilize, Bot Patrol |
 | `ui.ow` | In-World Text on Spawn, Persistent HUD Panel, Global Counter Display, Welcome Message, Big Message + Tip, Info Panel (Interact), Clear In-World Text |

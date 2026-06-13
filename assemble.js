@@ -14,11 +14,16 @@
 //   },
 //   "subroutines": { "0": "MyRoutine" },
 //   "rules": [
-//     "lib/match-control.ow",
+//     "lib/match-control.ow",                                  whole file, or
+//     { "file": "lib/match-control.ow", "rules": ["Quick Start Match"] },  pick rules
 //     "rules/my-custom-rules.ow",
 //     "imports/SHARECODE-some-mode.ow"
 //   ]
 // }
+//
+// A rules entry is either a path string (include the whole file) or an object
+// { file, rules: [names] } that includes only the named rule(s) from that file.
+// Either way the file's variables/subroutines/settings blocks are harvested.
 //
 // variables/subroutines blocks in source files are harvested and merged into
 // single blocks; duplicate slot numbers keep the manifest's name. If a source
@@ -72,11 +77,34 @@ function extractLeadingBlock(src, keyword) {
   return [null, src];
 }
 
+// Split rules-section text into top-level rule blocks (preserving any
+// `disabled` prefix), so a manifest can select individual rules by name.
+function splitTopLevelRules(src) {
+  const blocks = [];
+  const startRe = /^[ \t]*(?:disabled[ \t]+)?rule[ \t]*\(\s*"([^"]*)"\s*\)/gm;
+  let m;
+  while ((m = startRe.exec(src)) !== null) {
+    const name = m[1];
+    const braceStart = src.indexOf("{", m.index + m[0].length);
+    if (braceStart === -1) continue;
+    let depth = 0, end = -1;
+    for (let i = braceStart; i < src.length; i++) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}" && --depth === 0) { end = i; break; }
+    }
+    if (end === -1) continue;
+    blocks.push({ name, text: src.slice(m.index, end + 1) });
+  }
+  return blocks;
+}
+
 // ── collect rule text from each source file ──────────────────────────────────
 const ruleSections = [];
 let harvestedSettings = "";
 
-for (const relPath of manifest.rules) {
+for (const entry of manifest.rules) {
+  const relPath     = typeof entry === "string" ? entry : entry.file;
+  const selectNames = typeof entry === "string" ? null : entry.rules; // null = whole file
   const fullPath = path.resolve(base, relPath);
   if (!fs.existsSync(fullPath)) {
     console.warn(`  [warn] file not found, skipping: ${relPath}`);
@@ -119,9 +147,20 @@ for (const relPath of manifest.rules) {
   // strip leading assembly comment lines (// Assembled from: ...)
   src = src.replace(/^\/\/ Assembled from:.*\n/m, "");
 
-  const trimmed = src.trim();
-  if (trimmed) {
-    ruleSections.push(`// ── ${relPath} ${"─".repeat(Math.max(0, 60 - relPath.length))}\n${trimmed}`);
+  let body = src.trim();
+  if (selectNames) {
+    const blocks = splitTopLevelRules(body);
+    const chosen = [];
+    for (const name of selectNames) {
+      const block = blocks.find(b => b.name === name);
+      if (block) chosen.push(block.text);
+      else console.warn(`  [warn] rule not found in ${relPath}: "${name}"`);
+    }
+    body = chosen.join("\n\n");
+  }
+  if (body) {
+    const label = selectNames ? `${relPath} (${selectNames.length} selected)` : relPath;
+    ruleSections.push(`// ── ${label} ${"─".repeat(Math.max(0, 60 - label.length))}\n${body}`);
   }
 }
 

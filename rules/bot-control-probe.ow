@@ -1,0 +1,210 @@
+// ============================================================
+// BOT CONTROL PROBE — diagnostic, not a game mode
+// Answers: can Workshop control lobby-AI bots, or only Create Dummy Bot bots?
+//
+// How to use:
+//   1. Paste into any lobby (ideally one with lobby-AI Reinhardts added,
+//      e.g. the real Rein & Weave lobby) and start the match as the only human.
+//   2. A reference Workshop dummy bot (Reinhardt) auto-spawns on Team 1 Slot 5.
+//   3. Read the label over each head:  hero | dummy:True/False | spd
+//      - dummy:True  = Create Dummy Bot bot (Workshop-controllable)
+//      - dummy:False = human OR lobby AI (the gap we are testing)
+//   4. Drive the control tests and watch who obeys:
+//      - Hold INTERACT : throttle every non-host player toward the orange ring
+//      - Hold RELOAD   : force every non-host player to FACE the ring
+//      - Hold CROUCH   : make every non-host player JUMP
+//   While INTERACT is held the label also shows OBEYS / resists, comparing each
+//   bot's real velocity against the command. Dummy bots should read OBEYS;
+//   if lobby AI reads "resists" or ignores it, we cannot command them by throttle.
+// ============================================================
+
+variables
+{
+	global:
+		0: beacon
+		1: dummySpawned
+		2: refDummy
+		3: spawnIndex
+}
+
+rule("Probe — Beacon follows host reticle")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.beacon = Ray Cast Hit Position(Eye Position(Host Player), Eye Position(Host Player) + Facing Direction Of(Host Player)
+			* 60, Null, Host Player, False);
+		Wait(0.016, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Probe — Draw beacon ring")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Ring, Color(Orange), Update Every Frame(Global.beacon), 2, Visible To Position and Radius);
+	}
+}
+
+rule("Probe — Spawn reference dummy bot")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.dummySpawned == False;
+	}
+
+	actions
+	{
+		Wait(2, Ignore Condition);
+		Global.dummySpawned = True;
+		"Spawn a squad of 3 dummy Reins on Team 1 slots 3-5, lined up in front of the host."
+		For Global Variable(spawnIndex, 3, 6, 1);
+			Create Dummy Bot(Hero(Reinhardt), Team 1, Global.spawnIndex, Null, Null);
+			Global.refDummy = Last Created Entity;
+			Wait(0.250, Ignore Condition);
+			Teleport(Global.refDummy, Position Of(Host Player) + Facing Direction Of(Host Player) * 6
+				+ World Vector Of(Vector(Global.spawnIndex - 4, 0, 0), Host Player, Rotation));
+		End;
+	}
+}
+
+rule("Probe — Label every player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create In-World Text(All Players(All Teams), Custom String("{0}  dummy:{1}\n{2}", Hero Of(Event Player), Is Dummy Bot(Event Player),
+			Custom String("spd {0}  {1}", Round To Integer(Horizontal Speed Of(Event Player), To Nearest), Is Button Held(Host Player,
+			Button(Interact)) == False ? Custom String("") : (Horizontal Speed Of(Event Player) > 1 && Dot Product(Normalize(Velocity Of(
+			Event Player)), Direction Towards(Position Of(Event Player), Global.beacon)) > 0.500 ? Custom String("OBEYS") : Custom String(
+			"resists")))),
+			Update Every Frame(Eye Position(Event Player) + Vector(0, 1.200, 0)), 1, Clip Against Surfaces, Visible To Position and String,
+			Is Dummy Bot(Event Player) == True ? Color(Green) : Color(White), Default Visibility);
+	}
+}
+
+rule("Probe — Host instructions")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("BOT CONTROL PROBE"), Custom String(
+			"dummy:True = Create Dummy Bot.  dummy:False = human or lobby AI."), Custom String(
+			"Hold {0}=throttle to ring   {1}=face ring   {2}=jump", Input Binding String(Button(Interact)), Input Binding String(Button(
+			Reload)), Input Binding String(Button(Crouch))), Left, 0, Color(Orange), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Create HUD Text(Event Player, Null, Null, Custom String("dummies: {0}   non-dummies: {1}", Count Of(Filtered Array(All Players(
+			All Teams), Is Dummy Bot(Current Array Element) == True)), Count Of(Filtered Array(All Players(All Teams), Is Dummy Bot(
+			Current Array Element) == False))), Left, 1, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		"Direct readout of the known-good dummy: if THIS spd rises on Interact but AI does not, AI movement is uncommandable."
+		Create HUD Text(Event Player, Null, Null, Custom String("REF DUMMY exists:{0}  spd:{1}", Global.refDummy != Null, Round To Integer(
+			Global.refDummy == Null ? 0 : Horizontal Speed Of(Global.refDummy), To Nearest)), Left, 2, Color(Green), Color(Green), Color(
+			Green), Visible To and String, Default Visibility);
+	}
+}
+
+rule("Probe — TEST throttle to ring (hold Interact)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Host Player;
+		Is Button Held(Host Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Start Throttle In Direction(Event Player, Direction Towards(Position Of(Event Player), Global.beacon), 1, To World,
+			Replace existing throttle, Direction and Magnitude);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+rule("Probe — TEST force facing (hold Reload)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Host Player;
+		Is Button Held(Host Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Global.beacon), 360, To World, Direction and Turn Rate);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Probe — TEST jump (hold Crouch)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Host Player;
+		Is Button Held(Host Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Button(Jump));
+		Wait(0.500, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
