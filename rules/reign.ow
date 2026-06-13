@@ -25,6 +25,8 @@ variables
 		4: leashSetTime
 		5: rallyMarker
 		6: rallyPoint
+		7: rallyRing
+		8: rallySetTime
 }
 
 // Command radius: only Reins within this distance of a commander obey. The
@@ -106,6 +108,72 @@ rule("Reign — Rally leash (Interact + Secondary Fire)")
 		Event Player.leashSetTime = Total Time Elapsed;
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
+	}
+}
+
+// When a commander triggers rally, update or create visual markers at the target location.
+rule("Reign — Commander Rally Visuals")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.rallyPoint = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * 60, Null, Event Player, False);
+		Event Player.rallySetTime = Total Time Elapsed;
+		
+		"Create the effects if they do not already exist. They dynamically follow rallyPoint."
+		If(Event Player.rallyMarker == Null);
+			// Orange vertical light shaft representing the banner/beacon pole
+			Create Effect(All Players(Team Of(Event Player)), Light Shaft, Color(Orange), Event Player.rallyPoint, 1.000,
+				Visible To Position and Radius);
+			Event Player.rallyMarker = Last Created Entity;
+			
+			// Large ring showing the leash radius boundary on the ground
+			Create Effect(All Players(Team Of(Event Player)), Ring, Color(Orange), Event Player.rallyPoint, Global.botLeashRadius,
+				Visible To Position and Radius);
+			Event Player.rallyRing = Last Created Entity;
+		End;
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Destroy the commander's rally visuals after 8 seconds of inactivity to match the bot's leash timer.
+rule("Reign — Expire Rally Visuals")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == True;
+		Event Player.rallyMarker != Null;
+		Total Time Elapsed - Event Player.rallySetTime > 8;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.rallyMarker);
+		Destroy Effect(Event Player.rallyRing);
+		Event Player.rallyMarker = Null;
+		Event Player.rallyRing = Null;
 	}
 }
 
