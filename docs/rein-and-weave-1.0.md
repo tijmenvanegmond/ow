@@ -33,12 +33,15 @@ Implemented:
 
 ## Gaps to close for 1.0
 
-1. **Bot commanding** — the core fantasy, not yet implemented. LW inputs
-   direct the army: e.g. ping/look direction = attack-move there, Life Grip
-   target = rally point, Tree of Life = bots group and hold. Reuse proven
-   patterns from imports: `Start Throttle In Direction`/`Start Facing` bot
-   steering (7X3PY mimic routines, JPC racing), order state per bot in player
-   variables.
+1. **Bot commanding** — the core fantasy. The machinery now exists as libs,
+   proven in REIGN: `lib/bots.ow` (dummy-bot squad, perception, raycast
+   steering), `lib/reinbot.ow` (Rein attacks), `lib/squad-orders.ow` (leash
+   anchors, rally orders, markers). Remaining work: swap the lobby-AI Reins
+   for `lib/bots.ow` dummy bots (lobby AI ignores throttle/facing), set each
+   bot's `leashDefault` to its team's LifeWeaver so the army guards the
+   commander, and write the LW-native binding rules: ping/look direction =
+   attack-move there, Life Grip target = rally point, Tree of Life = bots
+   group and hold.
 2. **Win condition** — TDM score 40 is a proxy. 1.0: round ends when a
    LifeWeaver dies; first to N rounds wins. Needs the Unlimited Match rules
    from `lib/match-control.ow` (disable built-in completion) + a round
@@ -51,15 +54,32 @@ Implemented:
 5. **Polish** — round intro/outro messages, kill-feed flavor for LW kills,
    solo-mode Ana commander should also command (currently just exists).
 
+## Post-1.0 — army sandbox features (planned)
+
+1. **Reins out of the human player slots** — keep the joinable slots free for
+   humans: cap max players per team in the lobby settings and spawn the army
+   as dummy bots in the slots above that cap (`Create Dummy Bot` can fill
+   slots the lobby won't give to humans), so bots never block a player
+   joining and team-size UI stays honest.
+2. **Teamless Reins + recruiting** — Reins spawn unaligned around the map
+   (mechanically parked on a team but flagged unrecruited: grey name tag,
+   attack nobody, hold position) and join whoever recruits them (proximity +
+   heal/interact) via `Move Player to Team` + order-state reset. Army size
+   becomes something you build, not something you're given.
+3. **Converting enemy Reins** — a long-cooldown LW "grip" on an enemy Rein
+   pulls it across and flips it to your team (`Move Player to Team`, clear
+   its orders/leash, killfeed flavor). The counterpart threat to protecting
+   your own army.
+4. **General bot upgrades** — navigation: waypoint/path following beyond the
+   local raycast steering in `lib/bots.ow`, so bots escape concave dead-ends
+   (see `imports/HP2DG-deltins-pathfinding.ow` for a full pathfinding
+   reference); looking: idle scanning and threat prioritization instead of
+   nearest-enemy-only; communication: bots `Communicate` (voice lines/pings)
+   to acknowledge orders, call out charges, and react to their LW dying.
+
 ## Lobby setup (manual, documented for hosts)
 
 Each team: 1 human in Slot 0 + 3 AI Reinhardt (Hard). The settings preset
 carries modes/maps/heroes; AI bots are added via the lobby UI (lobby AI is
 not part of the settings text format).
 
-## Known quirks
-
-- Lobby copies strip three rules (observed 2026-06-12: a stale lobby paste was
-  missing Thorn Volley disable, Blossom speed boost, Fire Strike burn) — the
-  repo is the source of truth; always rebuild and re-import rather than
-  trusting the lobby's current script.

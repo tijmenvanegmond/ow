@@ -1,0 +1,178 @@
+// ============================================================
+// SQUAD ORDERS — commander→squad order layer on top of lib/bots.ow
+//
+// Gives every unclaimed bot a hold/rally anchor and renders team-visible
+// rally markers. Requires lib/bots.ow (claimed, botCommanded, botEnemy,
+// steerGoal/steerDir, BotSteer, botLeashRadius, leashAnchor).
+//
+// Consumer contract — a mode supplies the trigger/binding rules:
+//   - leashDefault (per bot): where the bot holds when no rally is active,
+//     e.g. the objective (REIGN) or the team's commander (Rein & Weave).
+//     Leave it 0 and bots never anchor-seek (pure lib/bots behavior).
+//   - Rally a bot: set leashCustom to a position and leashSetTime to
+//     Total Time Elapsed; the bot holds there for rallyHoldTime seconds,
+//     then falls back to leashDefault.
+//   - Rally marker: set rallyPoint + rallySetTime on the COMMANDER; this
+//     lib creates and expires the team-visible marker at rallyPoint.
+//   - commander / cmdMarker / cmdRangeMarker are declared here for binding
+//     rules to use (nearest ordering commander, reticle marker handles).
+//
+// Variables sit in player slots 70-79 and global 86-87 so they can't clash
+// with mode globals or lib/bots.ow (80-85) when merged by assemble.js.
+// ============================================================
+
+variables
+{
+	global:
+		86: cmdRadius
+		87: rallyHoldTime
+
+	player:
+		70: commander
+		71: cmdMarker
+		72: cmdRangeMarker
+		73: leashCustom
+		74: leashSetTime
+		75: rallyMarker
+		76: rallyPoint
+		77: rallyRing
+		78: rallySetTime
+		79: leashDefault
+}
+
+// Default knobs. A mode's own init rule (ordered after this lib) overrides them.
+rule("Squad — Init Defaults")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		"Only bots within this distance of a commander obey binding rules."
+		Global.cmdRadius = 20;
+		"How long a rally order (leashCustom) sticks before the bot falls back to leashDefault."
+		Global.rallyHoldTime = 8;
+	}
+}
+
+// Each bot's leash anchor: a recently rallied point, otherwise the consumer's
+// leashDefault. The brain chases/holds near this anchor (lib/bots Approach
+// Enemy leash check + the seek rule below).
+rule("Squad — Maintain Leash Anchor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Total Time Elapsed - Event Player.leashSetTime <= Global.rallyHoldTime && Event Player.leashCustom != 0);
+			Event Player.leashAnchor = Event Player.leashCustom;
+		Else;
+			Event Player.leashAnchor = Event Player.leashDefault;
+		End;
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Anchor drive: when an unclaimed bot has no enemy within engage range and is
+// not at its anchor, walk it there so the squad holds/contests the anchor.
+// (lib/bots Approach Enemy handles enemies within 20m; this covers the rest.)
+rule("Squad — Seek Leash Anchor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Event Player.leashAnchor != 0;
+		Distance Between(Position Of(Event Player), Event Player.leashAnchor) > 3;
+		(Distance Between(Position Of(Event Player), Event Player.leashAnchor) > Global.botLeashRadius || Event Player.botEnemy == Null
+			|| Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 20) == True;
+	}
+
+	actions
+	{
+		Event Player.steerGoal = Event Player.leashAnchor;
+		Call Subroutine(BotSteer);
+		Start Throttle In Direction(Event Player, Event Player.steerDir, 1, To World, Replace existing throttle, Direction and Magnitude);
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// When a consumer trigger stamps rallyPoint/rallySetTime on a commander,
+// create the team-visible marker there: a light-shaft beacon plus a ring
+// showing the leash radius. The effects follow rallyPoint dynamically.
+rule("Squad — Rally Marker Visuals")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.rallySetTime != 0;
+		Total Time Elapsed - Event Player.rallySetTime <= Global.rallyHoldTime;
+		Event Player.rallyMarker == Null;
+	}
+
+	actions
+	{
+		Create Effect(All Players(Team Of(Event Player)), Light Shaft, Color(Orange), Event Player.rallyPoint, 1.000,
+			Visible To Position and Radius);
+		Event Player.rallyMarker = Last Created Entity;
+		Create Effect(All Players(Team Of(Event Player)), Ring, Color(Orange), Event Player.rallyPoint, Global.botLeashRadius,
+			Visible To Position and Radius);
+		Event Player.rallyRing = Last Created Entity;
+	}
+}
+
+// Destroy a commander's rally marker once the rally has decayed, matching the
+// bots' leash timer.
+rule("Squad — Expire Rally Marker")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.rallyMarker != Null;
+		Total Time Elapsed - Event Player.rallySetTime > Global.rallyHoldTime;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.rallyMarker);
+		Destroy Effect(Event Player.rallyRing);
+		Event Player.rallyMarker = Null;
+		Event Player.rallyRing = Null;
+	}
+}

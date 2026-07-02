@@ -10,7 +10,7 @@
 //
 // The brain: each unclaimed living entity acquires the nearest visible enemy
 // (botEnemy), faces it, and approaches it. Hero attacks live in a consumer
-// layer (rules/reinbot.ow). A command layer sets botCommanded = True to drive
+// layer (lib/reinbot.ow). A command layer sets botCommanded = True to drive
 // the entity directly; the brain yields while commanded.
 //
 // Movement uses raycast wall avoidance (BotSteer): no navmesh, works on any
@@ -26,6 +26,7 @@ variables
 		81: botLoopIndex
 		82: botCommand
 		83: botTarget
+		84: botNames
 		85: botLeashRadius
 
 	player:
@@ -60,6 +61,10 @@ rule("Bots — Spawn Squad On Match Start")
 	actions
 	{
 		Global.botsSpawned = True;
+		"Pool of name-tag labels; the name tag rule indexes this by player slot (wraps around)."
+		Global.botNames = Array(Custom String("Rein"), Custom String("Wilhelm"), Custom String("Crusader"), Custom String("Applebee"),
+			Custom String("Papa Rein"), Custom String("Big Steel"), Custom String("Hammer Time"), Custom String("Barrier Bob"),
+			Custom String("Sir Smash"), Custom String("Earthdaddy"), Custom String("Honor"), Custom String("Glory"));
 		For Global Variable(botLoopIndex, 1, 6, 1);
 			"Kill right after creating: Create Dummy Bot can drop them at origin, so let
 			Quick Respawn place them properly in the spawn room."
@@ -95,6 +100,30 @@ rule("Bots — Quick Respawn")
 	}
 }
 
+// Give each dummy bot a funny name, picked from Global.botNames by player slot
+// (wrapping if there are more bots than names). Start Forcing Dummy Bot Name
+// sets the real nameplate/killfeed name and persists through respawns.
+rule("Bots — Name Tags")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Forcing Dummy Bot Name(Event Player, Value In Array(Global.botNames, Modulo(Slot Of(Event Player), Count Of(
+			Global.botNames))));
+	}
+}
+
 // Perception: each unclaimed living entity tracks the nearest enemy — the
 // nearest in line of sight, falling back to nearest overall.
 rule("Bots — Acquire Nearest Enemy")
@@ -123,9 +152,9 @@ rule("Bots — Acquire Nearest Enemy")
 	}
 }
 
-// Direct the bot's vision: face the current enemy if it has one, otherwise
-// face the direction it is steering/moving (so it looks where it walks).
-// Yields while commanded.
+// Direct the bot's vision: face the current enemy only while it can actually
+// see it (line of sight), otherwise face the direction it is steering/moving
+// (so it looks where it walks). Yields while commanded.
 rule("Bots — Face Target Or Movement")
 {
 	event
@@ -144,7 +173,8 @@ rule("Bots — Face Target Or Movement")
 
 	actions
 	{
-		Start Facing(Event Player, Event Player.botEnemy != Null ? Direction Towards(Eye Position(Event Player), Eye Position(
+		Start Facing(Event Player, Event Player.botEnemy != Null && Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Event Player.botEnemy), Barriers Do Not Block LOS) ? Direction Towards(Eye Position(Event Player), Eye Position(
 			Event Player.botEnemy)) : (Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir), 200,
 			To World, Direction and Turn Rate);
 		Wait(0.100, Ignore Condition);

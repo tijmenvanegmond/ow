@@ -1,0 +1,469 @@
+// Assembled from: lib/match-control.ow, rules/rein-and-weave-rules.ow
+// DO NOT EDIT — edit the source files and re-run assemble.js
+
+
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+	}
+
+	modes
+	{
+		disabled Deathmatch
+		{
+			Score To Win: 40
+		}
+
+		Team Deathmatch
+		{
+			Score To Win: 40
+
+			enabled maps
+			{
+				Black Forest 972777519512063901
+				Castillo 972777519512063901
+				Ilios Well 972777519512063901
+				Necropolis 972777519512068153
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Lifeweaver
+			{
+				Life Grip and Healing Blossom Range: 200%
+			}
+
+			enabled heroes
+			{
+				Ana
+				Lifeweaver
+				Reinhardt
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: soloSpawnedT1
+		1: soloSpawnedT2
+}
+
+// ── lib/match-control.ow ────────────────────────────────────────
+// ============================================================
+// MATCH CONTROL — rules for controlling match flow
+// ============================================================
+
+// Skips the hero-select phase by burning down the timer.
+rule("Skip Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0.2);
+	}
+}
+
+// Immediately starts the match (use in custom lobbies / practice maps).
+rule("Quick Start Match")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		Set Match Time(0.2);
+	}
+}
+
+// Pauses the clock and disables built-in game-mode completion so the
+// match runs forever. Flip the score and music lines as needed.
+rule("Unlimited Match — Pause Time & Disable Completion")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Pause Match Time;
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Scoring;
+		disabled Disable Built-In Game Mode Music;
+		Set Match Time(260);
+	}
+}
+
+// Awards +1 score per kill when Unlimited Match is active.
+rule("Unlimited Match — Score On Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}
+
+// ── rules/rein-and-weave-rules.ow ───────────────────────────────
+// ============================================================
+// REIN AND WEAVE — custom rules
+// 2 LifeWeaver players, each backed by 3 Rein bots on built-in AI.
+// Win by eliminating the enemy LifeWeaver.
+//
+// Lobby setup:
+//   Each team: 1 human slot (Slot 0) + 3 AI slots (Slots 1-3)
+//   AI hero: Reinhardt   AI difficulty: Hard
+// ============================================================
+
+// ── SETUP ────────────────────────────────────────────────────
+
+// Humans choose Reinhardt or LifeWeaver freely. One Ana per team unlocks
+// once the team already fields a LifeWeaver and a Reinhardt — counted
+// excluding yourself, so the team's only LW can't defect to Ana. Bots count
+// toward the Reinhardt requirement.
+rule("Setup — Human Hero Choice (Rein/LW, +1 Ana when fulfilled)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		While(True);
+			Set Player Allowed Heroes(Event Player,
+				Count Of(Players On Hero(Hero(Lifeweaver), Team Of(Event Player))) - (Hero Of(Event Player) == Hero(Lifeweaver)) >= 1
+				&& Count Of(Players On Hero(Hero(Reinhardt), Team Of(Event Player))) - (Hero Of(Event Player) == Hero(Reinhardt)) >= 1
+				&& Count Of(Players On Hero(Hero(Ana), Team Of(Event Player))) - (Hero Of(Event Player) == Hero(Ana)) == 0
+				? Array(Hero(Reinhardt), Hero(Lifeweaver), Hero(Ana))
+				: Array(Hero(Reinhardt), Hero(Lifeweaver)));
+			Wait(1, Ignore Condition);
+		End;
+	}
+}
+
+// Force every lobby AI bot onto Reinhardt (except the solo Ana commander).
+rule("Setup — Lock AI To Reinhardt")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Hero Of(Event Player) != Hero(Reinhardt);
+		Hero Of(Event Player) != Hero(Ana);
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero(Reinhardt));
+	}
+}
+
+// Announce the mode and lock buttons when a human joins. Fires exactly once.
+rule("Setup — Spawn Message")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Wait(0.500, Ignore Condition);
+		Big Message(Event Player, Custom String("REIN & WEAVE"));
+		Create HUD Text(Event Player, Custom String("Rein & Weave"), Null, Null,
+			Left, 0, Color(Orange), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Null, Null, Custom String("Protect your LifeWeaver — eliminate theirs!"),
+			Left, 1, Color(White), Color(White), Color(Orange), Visible To and String, Default Visibility);
+	}
+}
+
+// LW must heal, not fight: block Thorn Volley (Secondary Fire).
+rule("LW — Disable Thorn Volley")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Lifeweaver);
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Button(Secondary Fire));
+	}
+}
+
+rule("LW — Life Grip Max 4s Cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Lifeweaver);
+		Ability Cooldown(Event Player, Button(Ability 2)) > 4;
+	}
+
+	actions
+	{
+		Set Ability Cooldown(Event Player, Button(Ability 2), 4);
+	}
+}
+
+// ── HEALING BLOSSOM SPEED BOOST ──────────────────────────────
+
+// When LW's heal lands on an ally, give them a 2s speed boost.
+rule("LW — Healing Blossom Speed Boost")
+{
+	event
+	{
+		Player Received Healing;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Healer) == Hero(Lifeweaver);
+		Event Player != Healer;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 150);
+		Wait(2, Ignore Condition);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+// ── FIRE STRIKE BURN ─────────────────────────────────────────
+
+// When Fire Strike (Ability 2) hits, apply 3s burn: DoT + fire effect.
+rule("Rein — Fire Strike Burns Target")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Attacker) == Hero(Reinhardt);
+		Event Ability == Button(Ability 2);
+	}
+
+	actions
+	{
+		Start Damage Over Time(Event Player, Attacker, 3, 15);
+		Play Effect(All Players(All Teams), Bad Explosion, Color(Orange), Event Player, 1);
+		Create Effect(All Players(All Teams), Bad Aura, Color(Orange), Event Player, 1,
+			Visible To Position and Radius);
+		Wait(3, Ignore Condition);
+		Destroy Effect(Last Created Entity);
+	}
+}
+
+// ── BOT RESPAWN ───────────────────────────────────────────────
+
+// Respawn bots 2 seconds after death so the army recovers.
+rule("Bots — Quick Respawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is Dead(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(2, Ignore Condition);
+		Respawn(Event Player);
+	}
+}
+
+// ── SOLO / PRACTICE — spawn AI Ana + Reins if a team has no human ────────────
+
+// If Team 1 has no human player after 3 s, spawn an Ana bot as their commander.
+rule("Solo — Spawn AI Commander For Team 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.soloSpawnedT1 == False;
+		Count Of(Filtered Array(All Players(Team 1), Is Dummy Bot(Current Array Element) == False)) == 0;
+	}
+
+	actions
+	{
+		Wait(3, Ignore Condition);
+		Create Dummy Bot(Hero(Ana), Team 1, 0, Null, Null);
+		Set Global Variable(soloSpawnedT1, True);
+	}
+}
+
+// If Team 2 has no human player after 3 s, spawn an Ana bot as their commander.
+rule("Solo — Spawn AI Commander For Team 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.soloSpawnedT2 == False;
+		Count Of(Filtered Array(All Players(Team 2), Is Dummy Bot(Current Array Element) == False)) == 0;
+	}
+
+	actions
+	{
+		Wait(3, Ignore Condition);
+		Create Dummy Bot(Hero(Ana), Team 2, 0, Null, Null);
+		Set Global Variable(soloSpawnedT2, True);
+	}
+}
+
+// ── SCORING ───────────────────────────────────────────────────
+
+// +1 score for the player who lands the killing blow on a Rein bot.
+rule("Score — +1 Per Rein Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Victim) == Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Modify Team Score(Team Of(Event Player), 1);
+	}
+}
+
+rule("Score — +10 Per Lifeweaver Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Victim) == Hero(Lifeweaver);
+	}
+
+	actions
+	{
+		Modify Team Score(Team Of(Event Player), 10);
+	}
+}
+
+rule("Score — +5 Per Ana Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Victim) == Hero(Ana);
+	}
+
+	actions
+	{
+		Modify Team Score(Team Of(Event Player), 5);
+	}
+}

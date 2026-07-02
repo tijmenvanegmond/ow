@@ -1,0 +1,93 @@
+// ============================================================
+// BUFFS — reusable timed status effects (burn DoT + aura, speed boost)
+//
+// Consumer contract — a trigger rule stamps the parameters, setting the
+// *EndTime last* (writing it is what fires the lib rule):
+//
+//   Burn (e.g. Fire Strike, 3s / 15dps):
+//     Event Player.burnSource = Attacker;
+//     Event Player.burnDps = 15;
+//     Event Player.burnEndTime = Total Time Elapsed + 3;
+//
+//   Speed boost (e.g. Healing Blossom, 2s / 150%):
+//     Event Player.speedAmount = 150;
+//     Event Player.speedEndTime = Total Time Elapsed + 2;
+//
+// Re-applying while active extends the visual/speed to the new end time (the
+// running rule's Wait Until re-reads it); a re-applied burn also restarts the
+// DoT at the fresh remaining duration. The aura handle is stored per player,
+// so overlapping effects elsewhere can't be destroyed by mistake (the classic
+// Destroy Effect(Last Created Entity)-after-a-Wait bug).
+//
+// Variables use player slots 60-66 to avoid clashes with mode variables and
+// the other libs (squad-orders 70-79, bots 80-85) under assemble.js merging.
+// ============================================================
+
+variables
+{
+	player:
+		60: burnEndTime
+		61: burnDps
+		62: burnSource
+		63: burnAura
+		64: burnDot
+		65: speedEndTime
+		66: speedAmount
+}
+
+// Burn: damage over time credited to burnSource, with an orange aura on the
+// victim for the duration.
+rule("Buffs — Burn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Total Time Elapsed < Event Player.burnEndTime;
+	}
+
+	actions
+	{
+		"Re-application: clear the previous DoT/aura before starting fresh."
+		Stop Damage Over Time(Event Player.burnDot);
+		Destroy Effect(Event Player.burnAura);
+		Start Damage Over Time(Event Player, Event Player.burnSource, Event Player.burnEndTime - Total Time Elapsed,
+			Event Player.burnDps);
+		Event Player.burnDot = Last Damage Over Time ID;
+		Create Effect(All Players(All Teams), Bad Aura, Color(Orange), Event Player, 1, Visible To Position and Radius);
+		Event Player.burnAura = Last Created Entity;
+		Wait Until(Total Time Elapsed >= Event Player.burnEndTime, 9999);
+		Destroy Effect(Event Player.burnAura);
+		Event Player.burnAura = Null;
+		Event Player.burnEndTime = 0;
+	}
+}
+
+// Timed move-speed buff; restores to 100% when it lapses.
+rule("Buffs — Speed Boost")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Total Time Elapsed < Event Player.speedEndTime;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, Event Player.speedAmount);
+		Wait Until(Total Time Elapsed >= Event Player.speedEndTime, 9999);
+		Set Move Speed(Event Player, 100);
+		Event Player.speedEndTime = 0;
+	}
+}

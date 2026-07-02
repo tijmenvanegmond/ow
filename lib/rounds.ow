@@ -1,0 +1,85 @@
+// ============================================================
+// ROUNDS — custom round lifecycle: first to N round wins
+//
+// For modes whose real win condition isn't the built-in one (e.g. Rein &
+// Weave: round ends when a LifeWeaver dies). Pair with the "Unlimited Match"
+// rules from lib/match-control.ow (enabled) so the built-in mode never
+// completes on its own.
+//
+// Consumer contract:
+//   - End a round: set Global.roundWinner to the winning team, e.g.
+//     Global.roundWinner = Team Of(Attacker). This lib announces it, tallies
+//     it, resets the field (respawn everyone, zero ult charge), and starts
+//     the next round — or declares match victory at roundsToWin.
+//   - Mode-specific reset (clear orders, cooldowns, per-round state): add
+//     your own rule conditioned on Global.roundWinner != 0, ordered after
+//     this lib, and mirror the outro Wait before touching players.
+//   - Draws are not handled: always set a single team.
+//
+// Variables use global slots 90-94 to avoid clashes with mode globals and
+// the other libs (bots 80-85, squad-orders 86-87) under assemble.js merging.
+// ============================================================
+
+variables
+{
+	global:
+		90: roundWinner
+		91: roundWinsT1
+		92: roundWinsT2
+		93: roundsToWin
+		94: roundNumber
+}
+
+rule("Rounds — Init")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.roundsToWin = Workshop Setting Integer(Custom String("Rounds"), Custom String("Rounds to win"), 3, 1, 9, 0);
+		Global.roundNumber = 1;
+		"Round scoreboard; Visible To and String keeps the counts live and shows it to late joiners."
+		Create HUD Text(All Players(All Teams), Custom String("Round {0}", Global.roundNumber), Custom String("{0} : {1}",
+			Global.roundWinsT1, Global.roundWinsT2), Custom String("first to {0}", Global.roundsToWin), Top, 0, Color(White),
+			Color(Orange), Color(White), Visible To and String, Default Visibility);
+	}
+}
+
+// Fires when a consumer sets roundWinner: announce, tally, then either declare
+// match victory or reset the field and start the next round.
+rule("Rounds — Round Over")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.roundWinner != 0;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Custom String("{0} takes round {1}!", Global.roundWinner, Global.roundNumber));
+		If(Global.roundWinner == Team 1);
+			Global.roundWinsT1 += 1;
+		Else;
+			Global.roundWinsT2 += 1;
+		End;
+		"Outro pause so the killfeed/announce lands before the reset."
+		Wait(4, Ignore Condition);
+		If(Global.roundWinsT1 >= Global.roundsToWin || Global.roundWinsT2 >= Global.roundsToWin);
+			Declare Team Victory(Global.roundWinner);
+			Abort;
+		End;
+		Global.roundNumber += 1;
+		Respawn(All Players(All Teams));
+		Set Ultimate Charge(All Players(All Teams), 0);
+		Global.roundWinner = 0;
+		Big Message(All Players(All Teams), Custom String("Round {0} — fight!", Global.roundNumber));
+	}
+}

@@ -130,6 +130,9 @@ for (const entry of manifest.rules) {
       if (varMatch && scope) {
         const [, slot, name] = varMatch;
         if (!vars[scope][slot]) vars[scope][slot] = name;  // manifest wins on conflict
+        else if (vars[scope][slot] !== name) {
+          console.warn(`  [warn] ${scope} variable slot ${slot} conflict in ${relPath}: keeping "${vars[scope][slot]}", ignoring "${name}"`);
+        }
       }
     }
     return "";
@@ -140,6 +143,9 @@ for (const entry of manifest.rules) {
     for (const line of body.split("\n")) {
       const subMatch = line.match(/^\s*(\d+)\s*:\s*(\w+)/);
       if (subMatch && !subs[subMatch[1]]) subs[subMatch[1]] = subMatch[2];
+      else if (subMatch && subs[subMatch[1]] !== subMatch[2]) {
+        console.warn(`  [warn] subroutine slot ${subMatch[1]} conflict in ${relPath}: keeping "${subs[subMatch[1]]}", ignoring "${subMatch[2]}"`);
+      }
     }
     return "";
   });
@@ -161,6 +167,18 @@ for (const entry of manifest.rules) {
   if (body) {
     const label = selectNames ? `${relPath} (${selectNames.length} selected)` : relPath;
     ruleSections.push(`// ── ${label} ${"─".repeat(Math.max(0, 60 - label.length))}\n${body}`);
+  }
+}
+
+// ── sanity: variable names must be unique per scope in-game ──────────────────
+for (const scope of ["global", "player"]) {
+  const seen = {};
+  for (const [slot, name] of Object.entries(vars[scope])) {
+    if (seen[name] !== undefined) {
+      console.warn(`  [warn] ${scope} variable name "${name}" declared in slots ${seen[name]} and ${slot} — the game rejects duplicate names`);
+    } else {
+      seen[name] = slot;
+    }
   }
 }
 
@@ -205,7 +223,9 @@ if (manifest.settings) {
 if (!settingsBlock) settingsBlock = harvestedSettings;
 
 // ── write output ─────────────────────────────────────────────────────────────
-const sources  = manifest.rules.join(", ");
+const sources  = manifest.rules
+  .map(e => (typeof e === "string" ? e : `${e.file} (${e.rules.join(", ")})`))
+  .join(", ");
 const header   = `// Assembled from: ${sources}\n// DO NOT EDIT — edit the source files and re-run assemble.js\n`;
 const varBlock = buildVarsBlock(vars);
 const subBlock = buildSubsBlock(subs);

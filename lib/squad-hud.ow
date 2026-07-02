@@ -1,0 +1,71 @@
+// ============================================================
+// SQUAD HUD — army status lines for bot-army modes
+//
+// Each human gets a live right-side readout: own vs enemy living dummy-bot
+// counts, and (optionally) whether the enemy's key hero is still alive.
+//
+// Consumer contract:
+//   - Works as-is for the army counts (anything created by Create Dummy Bot).
+//   - To track a key hero (e.g. the enemy LifeWeaver in Rein & Weave), set
+//     Global.hudTrackedHero = Hero(Lifeweaver) in your mode's init rule;
+//     leave it unset to skip that line.
+//
+// Uses global slot 95 to avoid clashes with mode globals and the other libs
+// (bots 80-85, squad-orders 86-87, rounds 90-94) under assemble.js merging.
+// ============================================================
+
+variables
+{
+	global:
+		95: hudTrackedHero
+}
+
+// Live own/enemy army counts (living dummy bots per team).
+rule("Squad HUD — Army Status")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Null, Custom String("Army: {0}   Enemy army: {1}", Count Of(Filtered Array(
+			All Living Players(Team Of(Event Player)), Is Dummy Bot(Current Array Element) == True)), Count Of(Filtered Array(
+			All Living Players(Opposite Team Of(Team Of(Event Player))), Is Dummy Bot(Current Array Element) == True))), Right, 0,
+			Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+	}
+}
+
+// Alive/down indicator for the enemy's tracked hero (set Global.hudTrackedHero
+// in the mode's init to enable).
+rule("Squad HUD — Tracked Hero Status")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Global.hudTrackedHero != 0;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Null, Custom String("Enemy {0}: {1}", Global.hudTrackedHero, Count Of(Filtered Array(
+			All Living Players(Opposite Team Of(Team Of(Event Player))), Hero Of(Current Array Element) == Global.hudTrackedHero)) >= 1
+			? Custom String("ALIVE") : Custom String("DOWN")), Right, 1, Color(White), Color(White), Color(Orange),
+			Visible To and String, Default Visibility);
+	}
+}
