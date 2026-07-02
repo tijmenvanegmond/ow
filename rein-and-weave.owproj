@@ -9,6 +9,19 @@
   },
   "rules": [
     "lib/match-control.ow",
+    { "file": "lib/bots.ow", "rules": [
+      "Bots — Quick Respawn",
+      "Bots — Name Tags",
+      "Bots — Acquire Nearest Enemy",
+      "Bots — Face Target Or Movement",
+      "Bots — Steer (subroutine)",
+      "Bots — Approach Enemy"
+    ] },
+    "lib/squad-orders.ow",
+    "lib/reinbot.ow",
+    "lib/rounds.ow",
+    "lib/squad-hud.ow",
+    "lib/buffs.ow",
     "rules/rein-and-weave-rules.ow"
   ]
 }

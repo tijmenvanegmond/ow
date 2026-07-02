@@ -7,52 +7,62 @@ Teams of humans + **Reinhardt bots** (lobby AI, Hard). Humans choose
 already fields a LW and a Rein. The LifeWeaver is a support/commander, not a
 fighter — win by eliminating the enemy LifeWeaver while the Rein line fights.
 
-## Current state (0.x)
+## Current state (1.0-rc — built, needs in-game validation)
 
-Sources: `rules/rein-and-weave-rules.ow` + `lib/match-control.ow`,
-lobby preset `settings/rein-and-weave.ow`. Build:
+Sources: `rules/rein-and-weave-rules.ow` + libs (`match-control`, a `bots`
+subset, `squad-orders`, `reinbot`, `rounds`, `squad-hud`, `buffs`), lobby
+preset `settings/rein-and-weave.ow`. Build:
 `node assemble.js rein-and-weave.owproj` → `build/rein-and-weave.ow`.
 
 Implemented:
 
+- **The army**: 3 Reinhardt dummy bots per team (slots 1-3) on the
+  `lib/bots.ow` brain (perception, raycast steering) with `lib/reinbot.ow`
+  attacks; 2s respawn; humans are auto-claimed so the brain never drives
+  them. No lobby AI anywhere (it ignores throttle/facing)
+- **Commanding** (`lib/squad-orders.ow` bindings): the team's LW (or Ana
+  stand-in) is every bot's default leash anchor — the army fights near its
+  commander and marches back when it strays (leash radius 20). Hold Interact
+  = send the army to your reticle (team-visible rally marker); hold
+  Secondary Fire (freed up by the Thorn Volley block) to prime a charge —
+  every ready Rein braces (crouched, smoothly live-tracking your reticle,
+  power ring growing on the bot; an active Charge's orientation is
+  engine-locked, so the real Charge only starts at release) — release to
+  snap them to your cursor and launch the real Charge at speed scaled by
+  windup time (full power at 2s, max speed a Workshop Setting);
+  casting Life Grip or Tree of Life rallies the army to you
 - Hero choice via a per-player `Set Player Allowed Heroes` loop: Rein/LW
   always; Ana added only when the team (excluding you) has ≥1 LW, ≥1 Rein
-  (bots count), and no other Ana. Lobby bots force-locked to Reinhardt
-  (Ana exempt — see solo mode)
-- LW can't fight: Thorn Volley (Secondary Fire) disallowed
-- LW support buffs: Life Grip cooldown capped at 4s; Healing Blossom grants
-  the healed ally +50% move speed for 2s (not self)
-- Rein flavor: Fire Strike applies a 3s burn (15 dps + orange aura)
-- Bots respawn 2s after death
-- Solo/practice: if a team has no human after 3s, an Ana dummy bot spawns as
-  stand-in commander
-- Scoring: +1 per Rein kill, +5 per Ana kill, +10 per LifeWeaver kill
-- Lobby preset: 4v4 Team Deathmatch, score to win 40, maps Black Forest /
-  Castillo / Ilios Well / Necropolis, Life Grip & Blossom range 200%,
-  hero pool Ana/LW/Rein
+  (bots count), and no other Ana
+- LW can't fight: Thorn Volley disallowed; Life Grip cooldown capped;
+  Healing Blossom grants the healed ally a timed speed boost (`lib/buffs`)
+- Rein flavor: Fire Strike direct damage scaled down (default 50% — three
+  bots spamming it at full damage shredded everyone) + burn DoT with orange
+  aura (`lib/buffs`, aura handle stored per player)
+- **Rounds** (`lib/rounds.ow` + Unlimited Match): a LifeWeaver death ends
+  the round; announce, tally, reset, first to N wins. Only real LWs count —
+  when the solo Ana stand-in could end rounds, her constant brain-driven
+  deaths mass-respawned the lobby ("random" respawn waves)
+- **HUD**: army counts + enemy-LW-alive line (`lib/squad-hud.ow`), round
+  score (`lib/rounds.ow`), title/tip + commander hint
+- **Workshop Settings**: Fire Strike damage %, burn DPS/duration, blossom
+  boost %/duration, grip cooldown cap, rounds to win
+- Solo/practice: Ana dummy-bot stand-in commander (left unclaimed so the
+  brain moves her; her Reins guard her; worth +5 but never ends a round)
+- Scoring kept as scoreboard flavor: +1 Rein / +5 Ana / +10 LW kill
 
-## Gaps to close for 1.0
+## Remaining for 1.0
 
-1. **Bot commanding** — the core fantasy. The machinery now exists as libs,
-   proven in REIGN: `lib/bots.ow` (dummy-bot squad, perception, raycast
-   steering), `lib/reinbot.ow` (Rein attacks), `lib/squad-orders.ow` (leash
-   anchors, rally orders, markers). Remaining work: swap the lobby-AI Reins
-   for `lib/bots.ow` dummy bots (lobby AI ignores throttle/facing), set each
-   bot's `leashDefault` to its team's LifeWeaver so the army guards the
-   commander, and write the LW-native binding rules: ping/look direction =
-   attack-move there, Life Grip target = rally point, Tree of Life = bots
-   group and hold.
-2. **Win condition** — TDM score 40 is a proxy. 1.0: round ends when a
-   LifeWeaver dies; first to N rounds wins. Needs the Unlimited Match rules
-   from `lib/match-control.ow` (disable built-in completion) + a round
-   reset routine (respawn all, reset cooldowns/scores).
-3. **HUD** — army status (own/enemy Reins alive), enemy LW alive indicator,
-   round score. Current HUD is just the title + tip.
-4. **Workshop Settings** — expose balance levers: blossom speed-boost
-   duration/amount, burn dps, grip cooldown cap, bot respawn delay, rounds
-   to win.
-5. **Polish** — round intro/outro messages, kill-feed flavor for LW kills,
-   solo-mode Ana commander should also command (currently just exists).
+1. **In-game validation** — the whole 1.0 stack is untested in the lobby:
+   steering with a moving LW anchor, round reset flow, buffs, HUD lines,
+   solo mode.
+2. **Binding polish** — Interact-send feel (hold vs. toggle), whether the
+   Grip/Tree panic rally should hold longer than the standard rally decay,
+   and an attack-move binding (the real ping system is not exposed to
+   Workshop, so it needs a button or look-direction gesture).
+3. **Round reset extras** — clear stale rally/order state and ability
+   cooldowns on round start if the natural 8s rally decay isn't enough in
+   practice.
 
 ## Post-1.0 — army sandbox features (planned)
 
@@ -77,9 +87,10 @@ Implemented:
    nearest-enemy-only; communication: bots `Communicate` (voice lines/pings)
    to acknowledge orders, call out charges, and react to their LW dying.
 
-## Lobby setup (manual, documented for hosts)
+## Lobby setup (documented for hosts)
 
-Each team: 1 human in Slot 0 + 3 AI Reinhardt (Hard). The settings preset
-carries modes/maps/heroes; AI bots are added via the lobby UI (lobby AI is
-not part of the settings text format).
+Humans join Slot 0 of each team; the mode spawns 3 Reinhardt dummy bots per
+team into slots 1-3 at match start. **Do not add lobby AI** — lobby AI can't
+be commanded (ignores throttle/facing) and would fight the dummy-bot spawn
+for slots. The settings preset carries modes/maps/heroes.
 

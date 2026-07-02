@@ -1,14 +1,130 @@
 // ============================================================
-// REIN AND WEAVE — custom rules
-// 2 LifeWeaver players, each backed by 3 Rein bots on built-in AI.
-// Win by eliminating the enemy LifeWeaver.
+// REIN AND WEAVE — custom rules (1.0: commandable dummy-bot army)
 //
-// Lobby setup:
-//   Each team: 1 human slot (Slot 0) + 3 AI slots (Slots 1-3)
-//   AI hero: Reinhardt   AI difficulty: Hard
+// Teams of humans + Reinhardt dummy bots driven by the lib/bots brain and
+// lib/reinbot attacks. Humans pick Reinhardt or LifeWeaver (one Ana unlocks
+// per team once both are fielded). The LifeWeaver is the commander: the army
+// guards them by default (their position is the bots' leash anchor), holding
+// Interact sends the squad to the reticle, and casting Life Grip or Tree of
+// Life rallies the squad back to the commander. Round ends when a LifeWeaver
+// dies (lib/rounds); first to N rounds wins.
+//
+// Depends on: lib/bots.ow (brain), lib/squad-orders.ow (anchors/rally),
+// lib/reinbot.ow (attacks), lib/rounds.ow (round flow), lib/squad-hud.ow,
+// lib/buffs.ow, lib/match-control.ow (Unlimited Match).
+//
+// Lobby setup: 4v4, humans join Slot 0; the mode spawns 3 Rein dummy bots
+// per team into slots 1-3. Do NOT add lobby AI (uncontrollable — see
+// lib/bots.ow).
 // ============================================================
 
+variables
+{
+	global:
+		2: burnDps
+		3: burnDuration
+		4: boostAmount
+		5: boostDuration
+		6: gripCdCap
+		7: fsDamagePct
+		8: chargeMaxSpeed
+
+	player:
+		0: chargeMarker
+		1: chargeStart
+		2: chargeFx
+}
+
 // ── SETUP ────────────────────────────────────────────────────
+
+// Balance knobs (Workshop Settings) and lib configuration.
+rule("Setup — Init")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.burnDps = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Fire Strike burn DPS"), 15, 0, 100, 0);
+		Global.burnDuration = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Fire Strike burn duration"), 3, 0,
+			10, 1);
+		Global.boostAmount = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Blossom speed boost %"), 150, 100,
+			300, 2);
+		Global.boostDuration = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Blossom boost duration"), 2, 0, 10,
+			3);
+		Global.gripCdCap = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Life Grip cooldown cap"), 4, 1, 19, 4);
+		Global.fsDamagePct = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Fire Strike damage %"), 50, 0, 100,
+			5);
+		Global.chargeMaxSpeed = Workshop Setting Integer(Custom String("Rein & Weave"), Custom String("Charge max power speed %"), 300,
+			100, 500, 6);
+		"Bots only break off to fight within this distance of their anchor (the commander); beyond it they march back."
+		Global.botLeashRadius = 20;
+		"Squad HUD: show whether the enemy LifeWeaver is alive."
+		Global.hudTrackedHero = Hero(Lifeweaver);
+	}
+}
+
+// Spawn the armies: 3 Reinhardt dummy bots per team in slots 1-3. (The
+// lib/bots spawn rule is not included — it spawns 5 per team.) Name pool
+// feeds the lib's "Bots — Name Tags" rule.
+rule("Setup — Spawn Rein Squads")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.botsSpawned == False;
+	}
+
+	actions
+	{
+		Global.botsSpawned = True;
+		Global.botNames = Array(Custom String("Rein"), Custom String("Wilhelm"), Custom String("Crusader"), Custom String("Applebee"),
+			Custom String("Papa Rein"), Custom String("Big Steel"), Custom String("Hammer Time"), Custom String("Barrier Bob"),
+			Custom String("Sir Smash"), Custom String("Earthdaddy"), Custom String("Honor"), Custom String("Glory"));
+		For Global Variable(botLoopIndex, 1, 4, 1);
+			"Kill right after creating: Create Dummy Bot can drop them at origin, so let
+			the lib's Quick Respawn place them properly in the spawn room."
+			Create Dummy Bot(Hero(Reinhardt), Team 1, Global.botLoopIndex, Null, Null);
+			Kill(Last Created Entity, Null);
+			Create Dummy Bot(Hero(Reinhardt), Team 2, Global.botLoopIndex, Null, Null);
+			Kill(Last Created Entity, Null);
+			Wait(0.250, Ignore Condition);
+		End;
+	}
+}
+
+// Humans are never brain-driven: claim them the moment they exist. (In the
+// lib/bots control model everything unclaimed runs the bot brain; the solo
+// Ana stand-in stays unclaimed on purpose so the brain at least moves her.)
+rule("Setup — Humans Are Claimed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.claimed == False;
+	}
+
+	actions
+	{
+		Event Player.claimed = True;
+		Stop Throttle In Direction(Event Player);
+		Stop Facing(Event Player);
+	}
+}
 
 // Humans choose Reinhardt or LifeWeaver freely. One Ana per team unlocks
 // once the team already fields a LifeWeaver and a Reinhardt — counted
@@ -42,30 +158,8 @@ rule("Setup — Human Hero Choice (Rein/LW, +1 Ana when fulfilled)")
 	}
 }
 
-// Force every lobby AI bot onto Reinhardt (except the solo Ana commander).
-rule("Setup — Lock AI To Reinhardt")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Dummy Bot(Event Player) == True;
-		Hero Of(Event Player) != Hero(Reinhardt);
-		Hero Of(Event Player) != Hero(Ana);
-	}
-
-	actions
-	{
-		Start Forcing Player To Be Hero(Event Player, Hero(Reinhardt));
-	}
-}
-
-// Announce the mode and lock buttons when a human joins. Fires exactly once.
+// Announce the mode when a human joins; the command hint line reevaluates so
+// it only shows while you're on a commander hero.
 rule("Setup — Spawn Message")
 {
 	event
@@ -88,8 +182,255 @@ rule("Setup — Spawn Message")
 			Left, 0, Color(Orange), Color(White), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Null, Null, Custom String("Protect your LifeWeaver — eliminate theirs!"),
 			Left, 1, Color(White), Color(White), Color(Orange), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Null, Null, Hero Of(Event Player) == Hero(Lifeweaver) || Hero Of(Event Player) == Hero(Ana)
+			? Custom String("Hold {0}: send · Hold {1}: aim charge, release to launch · Grip/Tree: rally to you",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Secondary Fire)))
+			: Custom String(""),
+			Left, 2, Color(White), Color(White), Color(Sky Blue), Visible To and String, Default Visibility);
 	}
 }
+
+// ── COMMANDING (lib/squad-orders bindings) ───────────────────
+
+// Each bot guards its commander: the team's LifeWeaver (or the Ana stand-in
+// when there is no LW). The commander's position is the bot's default leash
+// anchor, so the army fights near them and marches back when it strays.
+rule("Weave — Army Follows Its Commander")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.commander = First Of(Append To Array(Players On Hero(Hero(Lifeweaver), Team Of(Event Player)), Players On Hero(
+			Hero(Ana), Team Of(Event Player))));
+		"No commander on the team: anchor to yourself (a leash that follows the bot = free-roam), never to 0 — the leash check in lib/bots would read vector zero as the map origin and freeze the bot."
+		Event Player.leashDefault = Event Player.commander != Null ? Position Of(Event Player.commander) : Position Of(Event Player);
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Send order: while the commander holds Interact, each of their Reins moves
+// its leash anchor to the commander's reticle (team-wide — no radius; the LW
+// commands from the backline).
+rule("Weave — Send Army To Reticle (commander holds Interact)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Event Player.commander != Null;
+		Is Button Held(Event Player.commander, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.leashCustom = Ray Cast Hit Position(Eye Position(Event Player.commander), Eye Position(Event Player.commander)
+			+ Facing Direction Of(Event Player.commander) * 100, Null, Event Player.commander, False);
+		Event Player.leashSetTime = Total Time Elapsed;
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Commander side of the send order: stamp the reticle into rallyPoint so
+// lib/squad-orders draws the team-visible rally marker there.
+rule("Weave — Rally Marker (commander holds Interact)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == True;
+		(Hero Of(Event Player) == Hero(Lifeweaver) || Hero Of(Event Player) == Hero(Ana)) == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.rallyPoint = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * 100, Null, Event Player, False);
+		Event Player.rallySetTime = Total Time Elapsed;
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Charge order, rev-up: while the LW holds Secondary Fire (Thorn Volley is
+// disallowed, so the button is free), a red ring follows their reticle and
+// grows as the charge powers up (full power at 2s). Marker only — the
+// windup itself is the bot-side rule below.
+rule("Weave — Charge Aim Marker (LW holds Secondary Fire)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == True;
+		Hero Of(Event Player) == Hero(Lifeweaver);
+		Is Alive(Event Player) == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.chargeStart = Total Time Elapsed;
+		"Position and Radius reevaluation keeps the ring on the reticle and growing with the power build-up."
+		Create Effect(All Players(Team Of(Event Player)), Ring, Color(Red), Update Every Frame(Ray Cast Hit Position(Eye Position(
+			Event Player), Eye Position(Event Player) + Facing Direction Of(Event Player) * 100, Null, Event Player, False)),
+			1 + Min(Total Time Elapsed - Event Player.chargeStart, 2) * 1.500, Visible To Position and Radius);
+		Event Player.chargeMarker = Last Created Entity;
+		Wait Until(Is Button Held(Event Player, Button(Secondary Fire)) == False, 9999);
+		Destroy Effect(Event Player.chargeMarker);
+	}
+}
+
+// The windup: an active Charge's orientation is engine-locked (Set Facing,
+// tap-cancel, and everything short of a stun bounce off it — verified
+// in-game), so the real Charge only starts at release. While priming, each
+// ready Rein BRACES instead: crouched, smoothly tracking the commander's
+// reticle (reevaluated Start Facing — the proven lib/bots primitive), with
+// a growing power ring on the bot. On release it snaps exactly to the
+// cursor, gets the built-up power speed (full power at 2s), and the real
+// Charge launches on that line. A bot whose Charge comes off cooldown
+// mid-hold joins late with less power.
+rule("Weave — Charge Windup: Brace, Track, Launch On Release")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Is Alive(Event Player) == True;
+		Ability Cooldown(Event Player, Button(Ability 1)) == 0;
+		Event Player.commander != Null;
+		Hero Of(Event Player.commander) == Hero(Lifeweaver);
+		Is Button Held(Event Player.commander, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.botCommanded = True;
+		Event Player.chargeStart = Total Time Elapsed;
+		"Kill any active blossom speed boost (lib/buffs) — its delayed restore would overwrite the power speed mid-charge."
+		Event Player.speedEndTime = 0;
+		"Brace stance; the growing ring telegraphs the power build-up to everyone."
+		Start Holding Button(Event Player, Button(Crouch));
+		Create Effect(All Players(All Teams), Ring, Color(Red), Update Every Frame(Position Of(Event Player)),
+			1 + Min(Total Time Elapsed - Event Player.chargeStart, 2), Visible To Position and Radius);
+		Event Player.chargeFx = Last Created Entity;
+		While(Is Button Held(Event Player.commander, Button(Secondary Fire)) && Is Alive(Event Player));
+			"Track the cursor by reasserting facing every tick — the bot brain's face rule fires a Stop Facing as it yields to botCommanded, which cancels any single persistent Start Facing."
+			Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Ray Cast Hit Position(Eye Position(
+				Event Player.commander), Eye Position(Event Player.commander) + Facing Direction Of(Event Player.commander) * 100, Null,
+				Event Player.commander, False)), To World);
+			Wait(0.033, Ignore Condition);
+		End;
+		Stop Holding Button(Event Player, Button(Crouch));
+		Destroy Effect(Event Player.chargeFx);
+		If(Is Alive(Event Player));
+			"Launch: snap exactly to the cursor, apply the built-up power, rev the real Charge."
+			Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Ray Cast Hit Position(Eye Position(
+				Event Player.commander), Eye Position(Event Player.commander) + Facing Direction Of(Event Player.commander) * 100, Null,
+				Event Player.commander, False)), To World);
+			Set Move Speed(Event Player, 100 + (Global.chargeMaxSpeed - 100) * Min(Total Time Elapsed - Event Player.chargeStart, 2)
+				/ 2);
+			Wait(0.032, Ignore Condition);
+			Press Button(Event Player, Button(Ability 1));
+			Play Effect(All Players(All Teams), Ring Explosion, Color(Red), Position Of(Event Player), 3);
+			Wait(0.100, Ignore Condition);
+			Wait Until(Is Using Ability 1(Event Player) == False, 4);
+		End;
+		Set Move Speed(Event Player, 100);
+		Event Player.botCommanded = False;
+	}
+}
+
+// Panic button: casting Life Grip (Ability 2) or Tree of Life (Ultimate)
+// rallies the commander's Reins to the commander's own position.
+rule("Weave — Grip/Tree Rallies The Army To You")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Hero Of(Event Player) == Hero(Reinhardt);
+		Event Player.commander != Null;
+		(Is Using Ability 2(Event Player.commander) || Is Using Ultimate(Event Player.commander)) == True;
+	}
+
+	actions
+	{
+		Event Player.leashCustom = Position Of(Event Player.commander);
+		Event Player.leashSetTime = Total Time Elapsed;
+	}
+}
+
+// Marker for the panic rally: ring/beacon at the commander's feet.
+rule("Weave — Grip/Tree Rally Marker")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == True;
+		Hero Of(Event Player) == Hero(Lifeweaver);
+		(Is Using Ability 2(Event Player) || Is Using Ultimate(Event Player)) == True;
+	}
+
+	actions
+	{
+		Event Player.rallyPoint = Position Of(Event Player);
+		Event Player.rallySetTime = Total Time Elapsed;
+	}
+}
+
+// ── LIFEWEAVER RESTRICTIONS & BUFFS ──────────────────────────
 
 // LW must heal, not fight: block Thorn Volley (Secondary Fire).
 rule("LW — Disable Thorn Volley")
@@ -112,7 +453,7 @@ rule("LW — Disable Thorn Volley")
 	}
 }
 
-rule("LW — Life Grip Max 4s Cooldown")
+rule("LW — Life Grip Cooldown Cap")
 {
 	event
 	{
@@ -124,18 +465,16 @@ rule("LW — Life Grip Max 4s Cooldown")
 	conditions
 	{
 		Hero Of(Event Player) == Hero(Lifeweaver);
-		Ability Cooldown(Event Player, Button(Ability 2)) > 4;
+		Ability Cooldown(Event Player, Button(Ability 2)) > Global.gripCdCap;
 	}
 
 	actions
 	{
-		Set Ability Cooldown(Event Player, Button(Ability 2), 4);
+		Set Ability Cooldown(Event Player, Button(Ability 2), Global.gripCdCap);
 	}
 }
 
-// ── HEALING BLOSSOM SPEED BOOST ──────────────────────────────
-
-// When LW's heal lands on an ally, give them a 2s speed boost.
+// When LW's heal lands on an ally, give them a speed boost (lib/buffs).
 rule("LW — Healing Blossom Speed Boost")
 {
 	event
@@ -149,20 +488,27 @@ rule("LW — Healing Blossom Speed Boost")
 	{
 		Hero Of(Healer) == Hero(Lifeweaver);
 		Event Player != Healer;
+		// No boost for a bot under orders (bracing/charging) — its Set Move Speed
+		// would fight the charge power speed.
+		Event Player.botCommanded == False;
 	}
 
 	actions
 	{
-		Set Move Speed(Event Player, 150);
-		Wait(2, Ignore Condition);
-		Set Move Speed(Event Player, 100);
+		Event Player.speedAmount = Global.boostAmount;
+		Event Player.speedEndTime = Total Time Elapsed + Global.boostDuration;
 	}
 }
 
 // ── FIRE STRIKE BURN ─────────────────────────────────────────
 
-// When Fire Strike (Ability 2) hits, apply 3s burn: DoT + fire effect.
-rule("Rein — Fire Strike Burns Target")
+// When Fire Strike (Ability 2) hits: scale its direct damage down to
+// fsDamagePct (refund the difference as an instant heal — with three bots
+// per team spamming it off cooldown, full-damage strikes shredded everyone)
+// and apply the burn (lib/buffs: DoT + aura). The refund's healer is Null,
+// so it can't trigger the blossom speed boost. A hit that's lethal at full
+// damage still kills — the refund lands after the damage.
+rule("Rein — Fire Strike Reduced Damage + Burn")
 {
 	event
 	{
@@ -179,43 +525,48 @@ rule("Rein — Fire Strike Burns Target")
 
 	actions
 	{
-		Start Damage Over Time(Event Player, Attacker, 3, 15);
+		Heal(Event Player, Null, Event Damage * (100 - Global.fsDamagePct) / 100);
 		Play Effect(All Players(All Teams), Bad Explosion, Color(Orange), Event Player, 1);
-		Create Effect(All Players(All Teams), Bad Aura, Color(Orange), Event Player, 1,
-			Visible To Position and Radius);
-		Wait(3, Ignore Condition);
-		Destroy Effect(Last Created Entity);
+		Event Player.burnSource = Attacker;
+		Event Player.burnDps = Global.burnDps;
+		Event Player.burnEndTime = Total Time Elapsed + Global.burnDuration;
 	}
 }
 
-// ── BOT RESPAWN ───────────────────────────────────────────────
+// ── ROUNDS ───────────────────────────────────────────────────
 
-// Respawn bots 2 seconds after death so the army recovers.
-rule("Bots — Quick Respawn")
+// A LifeWeaver death ends the round for the enemy team (lib/rounds handles
+// the announce/tally/reset). Only real LifeWeavers count: letting the solo
+// Ana stand-in end rounds made every off-screen stand-in death respawn the
+// whole lobby — she's brain-driven into melee and dies constantly, which
+// read as "random" respawn waves in practice games.
+rule("Round — LifeWeaver Death Ends The Round")
 {
 	event
 	{
-		Ongoing - Each Player;
+		Player Died;
 		All;
 		All;
 	}
 
 	conditions
 	{
-		Is Dummy Bot(Event Player) == True;
-		Is Dead(Event Player) == True;
+		Global.roundWinner == 0;
+		Hero Of(Victim) == Hero(Lifeweaver);
 	}
 
 	actions
 	{
-		Wait(2, Ignore Condition);
-		Respawn(Event Player);
+		Global.roundWinner = Opposite Team Of(Team Of(Victim));
 	}
 }
 
-// ── SOLO / PRACTICE — spawn AI Ana + Reins if a team has no human ────────────
+// ── SOLO / PRACTICE — spawn an AI Ana stand-in if a team has no human ────────
 
-// If Team 1 has no human player after 3 s, spawn an Ana bot as their commander.
+// If Team 1 has no human player after 3 s, spawn an Ana bot as their
+// commander. She stays unclaimed so the bot brain moves her and the Reins
+// guard her; her death is worth +5 but does NOT end the round (a practice
+// team can't lose rounds — she feeds too often to be a round condition).
 rule("Solo — Spawn AI Commander For Team 1")
 {
 	event
@@ -261,9 +612,11 @@ rule("Solo — Spawn AI Commander For Team 2")
 	}
 }
 
-// ── SCORING ───────────────────────────────────────────────────
+// ── SCORING (flavor — the real win is rounds) ────────────────
 
-// +1 score for the player who lands the killing blow on a Rein bot.
+// +1 team score for a Rein kill, +5 for the Ana stand-in, +10 for a
+// LifeWeaver. Built-in TDM scoring/completion is disabled by the Unlimited
+// Match rule; these keep the scoreboard readable between rounds.
 rule("Score — +1 Per Rein Kill")
 {
 	event
