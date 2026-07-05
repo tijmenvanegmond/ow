@@ -17,7 +17,8 @@
       "Bots — Idle Look Around",
       "Bots — Greet Nearby Players",
       "Bots — Steer (subroutine)",
-      "Bots — Approach Enemy"
+      "Bots — Approach Enemy",
+      "Bots — Unstick"
     ] },
     "lib/squad-orders.ow",
     "lib/reinbot.ow",

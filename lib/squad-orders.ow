@@ -3,7 +3,7 @@
 //
 // Gives every unclaimed bot a hold/rally anchor and renders team-visible
 // rally markers. Requires lib/bots.ow (claimed, botCommanded, botEnemy,
-// steerGoal/steerDir, BotSteer, botLeashRadius, leashAnchor).
+// steerGoal/steerDir, BotSteer, botLeashRadius, leashAnchor, botEscaping).
 //
 // Consumer contract — a mode supplies the trigger/binding rules:
 //   - leashDefault (per bot): where the bot holds when no rally is active,
@@ -105,6 +105,7 @@ rule("Squad — Seek Leash Anchor")
 		Event Player.claimed == False;
 		Is Alive(Event Player) == True;
 		Event Player.botCommanded == False;
+		Event Player.botEscaping == False;
 		Event Player.leashAnchor != 0;
 		Distance Between(Position Of(Event Player), Event Player.leashAnchor) > 3;
 		(Distance Between(Position Of(Event Player), Event Player.leashAnchor) > Global.botLeashRadius || Event Player.botEnemy == Null

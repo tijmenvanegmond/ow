@@ -13,10 +13,13 @@
 // layer (lib/reinbot.ow). A command layer sets botCommanded = True to drive
 // the entity directly; the brain yields while commanded.
 //
-// Movement uses raycast wall avoidance (BotSteer): no navmesh, works on any
-// map, rounds corners and slips past walls — but it's local-only, so it can
-// stick in concave dead-ends. Variables use high slots to avoid clashing with
-// mode globals when merged by assemble.js.
+// Movement uses raycast wall + cliff avoidance (BotSteer): no navmesh, works
+// on any map, rounds corners, slips past walls, and refuses ledge drops
+// deeper than 3m. It's still local-only, so concave dead-ends can trap it —
+// the Unstick rule detects that (throttling but not moving) and escalates:
+// jump, then a committed backward escape run (botEscaping suspends the
+// goal-seek rules meanwhile). Variables use high slots to avoid clashing
+// with mode globals when merged by assemble.js.
 // ============================================================
 
 variables
@@ -38,6 +41,9 @@ variables
 		85: leashAnchor
 		86: lookDir
 		87: helloTime
+		88: botEscaping
+		89: stuckPos
+		90: stuckLevel
 }
 
 subroutines
@@ -254,10 +260,11 @@ rule("Bots — Greet Nearby Players")
 	}
 }
 
-// Steering with wall avoidance: given Event Player.steerGoal (a position),
-// fan candidate directions around the goal heading, raycast each against map
-// geometry at body height, and pick the clearest — set into steerDir. Map-
-// agnostic local avoidance: rounds corners / slips past walls, no navmesh.
+// Steering with wall AND cliff avoidance: given Event Player.steerGoal (a
+// position), fan candidate directions around the goal heading, raycast each
+// against map geometry at body height plus a downward ground probe 2.5m
+// ahead, and pick the clearest — set into steerDir. Map-agnostic local
+// avoidance: rounds corners, slips past walls, refuses ledges; no navmesh.
 rule("Bots — Steer (subroutine)")
 {
     event
@@ -268,14 +275,16 @@ rule("Bots — Steer (subroutine)")
 
     actions
     {
-        "Rank fanned dirs by the safest of a low/high ray (Min), but raised to 0.7m so it clears stairs. Lower rank = better. Hysteresis (0.010) stops flapping; Goal Focus (0.015) pulls the bot back to the leash."
+        "Rank fanned dirs by the safest of a low/high wall ray and a ground probe 2.5m ahead (Min): if the floor there is more than 3m below the feet (or absent), the candidate scores 0, so ledges repel like walls — bots also won't take intentional drops deeper than 3m. Lower rank = better. Hysteresis (0.018) commits to the current heading so corners don't cause flip-flopping; Goal Focus (0.015) pulls the bot back to the goal."
         Event Player.steerDir = First Of(Sorted Array(Mapped Array(Array(0, 25, -25, 50, -50, 75, -75, 110, -110), Direction From Angles(
             Horizontal Angle From Direction(Direction Towards(Position Of(Event Player), Event Player.steerGoal)) + Current Array Element,
-            0)), -1 * Min(Distance Between(Position Of(Event Player) + Up * 0.700, Ray Cast Hit Position(Position Of(Event Player) + Up
+            0)), -1 * Min(Min(Distance Between(Position Of(Event Player) + Up * 0.700, Ray Cast Hit Position(Position Of(Event Player) + Up
             * 0.700, Position Of(Event Player) + Up * 0.700 + Current Array Element * 4, Null, Event Player, False)), Distance Between(
             Position Of(Event Player) + Up * 1.200, Ray Cast Hit Position(Position Of(Event Player) + Up * 1.200, Position Of(Event Player)
-            + Up * 1.200 + Current Array Element * 4, Null, Event Player, False))) + Angle Between Vectors(Current Array Element,
-            Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir) * 0.010 + Angle Between Vectors(
+            + Up * 1.200 + Current Array Element * 4, Null, Event Player, False))), Y Component Of(Position Of(Event Player)) - Y Component Of(
+            Ray Cast Hit Position(Position Of(Event Player) + Up * 1.500 + Current Array Element * 2.500, Position Of(Event Player) - Up
+            * 5.500 + Current Array Element * 2.500, Null, Event Player, False)) <= 3 ? 100 : 0) + Angle Between Vectors(Current Array Element,
+            Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir) * 0.018 + Angle Between Vectors(
             Current Array Element, Direction Towards(Position Of(Event Player), Event Player.steerGoal)) * 0.015));
     }
 }
@@ -295,6 +304,7 @@ rule("Bots — Approach Enemy")
 		Event Player.claimed == False;
 		Is Alive(Event Player) == True;
 		Event Player.botCommanded == False;
+		Event Player.botEscaping == False;
 		Event Player.botEnemy != Null;
 		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) > 3;
 		Distance Between(Position Of(Event Player), Position Of(Event Player.botEnemy)) <= 20;
@@ -310,6 +320,57 @@ rule("Bots — Approach Enemy")
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// Stuck detection + escape ladder: every 2s, a bot that is applying throttle
+// but has barely moved escalates — first a Jump (clears lips, stairs, props),
+// then a committed backward-ish run on a fresh random heading while
+// botEscaping suspends the goal-seeking rules. Converts permanent wall/corner
+// deadlocks into a 2-4s hiccup.
+rule("Bots — Unstick")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.stuckPos = Position Of(Event Player);
+		Wait(2, Ignore Condition);
+		"Stuck = trying to move (throttle applied) but barely displaced, and not being driven by a commander."
+		If(Distance Between(Position Of(Event Player), Event Player.stuckPos) <= 0.750 && Magnitude Of(Throttle Of(Event Player)) > 0.100
+			&& Event Player.botCommanded == False && Is Alive(Event Player) == True);
+			Event Player.stuckLevel += 1;
+		Else;
+			Event Player.stuckLevel = 0;
+		End;
+		If(Event Player.stuckLevel == 1);
+			Press Button(Event Player, Button(Jump));
+		Else If(Event Player.stuckLevel >= 2);
+			"Suspend the goal-seek rules, let their loops exit and release throttle, then run off backward-ish. Seeding steerDir with the escape heading makes the next BotSteer call commit away from the wall instead of walking straight back in."
+			Event Player.botEscaping = True;
+			Wait(0.300, Ignore Condition);
+			Event Player.steerDir = Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player))
+				+ Random Real(120, 240), 0);
+			Start Throttle In Direction(Event Player, Event Player.steerDir, 1, To World, Replace existing throttle,
+				Direction and Magnitude);
+			Press Button(Event Player, Button(Jump));
+			Wait(0.800, Ignore Condition);
+			Stop Throttle In Direction(Event Player);
+			Event Player.stuckLevel = 0;
+			Event Player.botEscaping = False;
+		End;
+		Loop If Condition Is True;
 	}
 }
 
