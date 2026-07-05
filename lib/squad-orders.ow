@@ -17,8 +17,8 @@
 //   - commander / cmdMarker / cmdRangeMarker are declared here for binding
 //     rules to use (nearest ordering commander, reticle marker handles).
 //
-// Variables sit in player slots 70-79 and global 86-87 so they can't clash
-// with mode globals or lib/bots.ow (80-85) when merged by assemble.js.
+// Variables sit in player slots 69-79 and global 86-87 so they can't clash
+// with mode globals or lib/bots.ow (80-87) when merged by assemble.js.
 // ============================================================
 
 variables
@@ -28,6 +28,7 @@ variables
 		87: rallyHoldTime
 
 	player:
+		69: ackTime
 		70: commander
 		71: cmdMarker
 		72: cmdRangeMarker
@@ -118,6 +119,36 @@ rule("Squad — Seek Leash Anchor")
 		Wait(0.250, Ignore Condition);
 		Loop If Condition Is True;
 		Stop Throttle In Direction(Event Player);
+	}
+}
+
+// Acknowledge orders: when a bot starts being commanded (botCommanded rises)
+// or a rally order lands on it (leashSetTime freshly stamped), play the
+// hero's Acknowledge voice line. The inner cooldown keeps rapid re-presses
+// from turning the squad into a chant.
+rule("Squad — Acknowledge Orders")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		(Event Player.botCommanded == True || (Event Player.leashCustom != 0 && Total Time Elapsed - Event Player.leashSetTime <= 0.300))
+			== True;
+	}
+
+	actions
+	{
+		If(Total Time Elapsed - Event Player.ackTime >= 6);
+			Event Player.ackTime = Total Time Elapsed;
+			Communicate(Event Player, Acknowledge);
+		End;
 	}
 }
 

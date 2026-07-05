@@ -14,6 +14,8 @@
       "Bots — Name Tags",
       "Bots — Acquire Nearest Enemy",
       "Bots — Face Target Or Movement",
+      "Bots — Idle Look Around",
+      "Bots — Greet Nearby Players",
       "Bots — Steer (subroutine)",
       "Bots — Approach Enemy"
     ] },

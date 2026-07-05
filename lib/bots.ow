@@ -36,6 +36,8 @@ variables
 		83: steerGoal
 		84: steerDir
 		85: leashAnchor
+		86: lookDir
+		87: helloTime
 }
 
 subroutines
@@ -153,8 +155,9 @@ rule("Bots — Acquire Nearest Enemy")
 }
 
 // Direct the bot's vision: face the current enemy only while it can actually
-// see it (line of sight), otherwise face the direction it is steering/moving
-// (so it looks where it walks). Yields while commanded.
+// see it (line of sight); otherwise face the direction it is steering/moving
+// (so it looks where it walks) while in motion, or the wandering idle gaze
+// (lookDir, from "Idle Look Around") while standing. Yields while commanded.
 rule("Bots — Face Target Or Movement")
 {
 	event
@@ -175,11 +178,79 @@ rule("Bots — Face Target Or Movement")
 	{
 		Start Facing(Event Player, Event Player.botEnemy != Null && Is In Line of Sight(Eye Position(Event Player), Eye Position(
 			Event Player.botEnemy), Barriers Do Not Block LOS) ? Direction Towards(Eye Position(Event Player), Eye Position(
-			Event Player.botEnemy)) : (Event Player.steerDir == 0 ? Facing Direction Of(Event Player) : Event Player.steerDir), 200,
+			Event Player.botEnemy)) : (Speed Of(Event Player) > 2 && Event Player.steerDir != 0 ? Event Player.steerDir : (
+			Event Player.lookDir == 0 ? Facing Direction Of(Event Player) : Event Player.lookDir)), 200,
 			To World, Direction and Turn Rate);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 		Stop Facing(Event Player);
+	}
+}
+
+// Idle gaze wander: while standing around with no visible enemy, pick a new
+// glance direction (relative to the current facing, mostly level) every few
+// seconds; the Face rule above renders it. While moving or fighting, keep
+// lookDir pinned to the current facing so re-idling starts from there.
+rule("Bots — Idle Look Around")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+	}
+
+	actions
+	{
+		If(Speed Of(Event Player) <= 2 && (Event Player.botEnemy == Null || Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Event Player.botEnemy), Barriers Do Not Block LOS) == False));
+			Event Player.lookDir = Direction From Angles(Horizontal Angle From Direction(Facing Direction Of(Event Player))
+				+ Random Real(-120, 120), Random Real(-20, 10));
+		Else;
+			Event Player.lookDir = Facing Direction Of(Event Player);
+		End;
+		Wait(Random Real(1.500, 4), Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+// Say hi: when a real player (not a dummy bot) on the bot's team comes within
+// earshot, glance at them and play the hero's Hello voice line. Per-bot
+// cooldown so a player standing in the squad gets greeted, not serenaded.
+rule("Bots — Greet Nearby Players")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.claimed == False;
+		Is Alive(Event Player) == True;
+		Event Player.botCommanded == False;
+		Is True For Any(All Living Players(Team Of(Event Player)), Is Dummy Bot(Current Array Element) == False
+			&& Current Array Element != Event Player && Distance Between(Position Of(Event Player), Position Of(
+			Current Array Element)) <= 5) == True;
+		Total Time Elapsed - Event Player.helloTime >= 15;
+	}
+
+	actions
+	{
+		Event Player.helloTime = Total Time Elapsed;
+		Event Player.lookDir = Direction Towards(Eye Position(Event Player), Eye Position(First Of(Sorted Array(Filtered Array(
+			All Living Players(Team Of(Event Player)), Is Dummy Bot(Current Array Element) == False && Current Array Element
+			!= Event Player), Distance Between(Position Of(Event Player), Position Of(Current Array Element))))));
+		Communicate(Event Player, Hello);
 	}
 }
 
